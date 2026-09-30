@@ -83,4 +83,6 @@ export interface SimContext {
   call(stationId: string, req: SimRequest, reply: Reply): void
   tightenDeadline(req: SimRequest, deadline: number): void
   createBackgroundRequest(kind: RequestKind): SimRequest
+  /** A background request created with createBackgroundRequest has finished (or was refused). */
+  backgroundDone(): void
 }
