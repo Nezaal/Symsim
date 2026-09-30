@@ -7,16 +7,19 @@ import { categoryColor } from '../lib/categories.js'
 import ComponentIcon from './ComponentIcon.jsx'
 import NodeSettings from './NodeSettings.jsx'
 
-// Leave room at the bottom for the minimap (bottom-right).
-const PANEL_STYLE = { maxHeight: 'calc(100% - 12rem)' }
+// When the minimap is shown (bottom-right), stop above it; otherwise use the full height.
+const PANEL_STYLE_WITH_MINIMAP = { maxHeight: 'calc(100% - 12rem)' }
+const PANEL_STYLE_FULL = { maxHeight: 'calc(100% - 2rem)' }
 
 /**
  * Floating settings card in the canvas's top-right corner, the right-hand
  * twin of the ☰ menu. It has no open/closed state of its own: it's visible
  * exactly while at least one component is selected. Click empty canvas (or ✕)
  * to deselect and it disappears.
+ *
+ * @param {{ minimapVisible: boolean }} props
  */
-function ConfigPanel() {
+function ConfigPanel({ minimapVisible }) {
   // useShallow: filter() returns a new array every time; compare its items instead.
   const selectedNodes = useArchitectureStore(useShallow((s) => s.nodes.filter((n) => n.selected)))
   const duplicateSelected = useArchitectureStore((s) => s.duplicateSelected)
@@ -28,7 +31,11 @@ function ConfigPanel() {
   const single = selectedNodes.length === 1 ? selectedNodes[0] : null
 
   return (
-    <Panel position="top-right" className="flex flex-col" style={PANEL_STYLE}>
+    <Panel
+      position="top-right"
+      className="flex flex-col"
+      style={minimapVisible ? PANEL_STYLE_WITH_MINIMAP : PANEL_STYLE_FULL}
+    >
       <section
         aria-label="Configuration"
         className="nowheel flex min-h-0 w-72 flex-col rounded-lg border border-line bg-surface shadow-lg"

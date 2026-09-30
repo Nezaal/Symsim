@@ -1,5 +1,5 @@
 import { Panel, useReactFlow, useStore } from '@xyflow/react'
-import { Maximize, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
+import { Map as MapIcon, Maximize, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
 import { useArchitectureStore } from '../store/architectureStore.js'
 
 const ANIMATION = { duration: 150 }
@@ -8,8 +8,10 @@ const zoomSelector = (s) => s.transform[2] // transform = [x, y, zoom]
 /**
  * Excalidraw-style bottom-left bar: zoom controls and undo/redo, side by side.
  * Replaces React Flow's default <Controls /> so everything matches our style.
+ *
+ * @param {{ minimapVisible: boolean, onToggleMinimap: () => void }} props
  */
-function CanvasControls() {
+function CanvasControls({ minimapVisible, onToggleMinimap }) {
   const { zoomIn, zoomOut, zoomTo, fitView } = useReactFlow()
   const zoom = useStore(zoomSelector)
   const canUndo = useArchitectureStore((s) => s.past.length > 0)
@@ -37,6 +39,9 @@ function CanvasControls() {
         <IconButton label="Fit to screen" onClick={() => fitView({ ...ANIMATION, padding: 0.2, maxZoom: 1 })}>
           <Maximize size={15} aria-hidden="true" />
         </IconButton>
+        <IconButton label="Minimap" onClick={onToggleMinimap} pressed={minimapVisible}>
+          <MapIcon size={15} aria-hidden="true" />
+        </IconButton>
       </div>
 
       <div className={group}>
@@ -53,16 +58,17 @@ function CanvasControls() {
   )
 }
 
-/** @param {{ label: string, onClick: () => void, disabled?: boolean, children: React.ReactNode }} props */
-function IconButton({ label, onClick, disabled = false, children }) {
+/** @param {{ label: string, onClick: () => void, disabled?: boolean, pressed?: boolean, children: React.ReactNode }} props */
+function IconButton({ label, onClick, disabled = false, pressed, children }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
       aria-disabled={disabled}
+      aria-pressed={pressed}
       title={label}
-      className="flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:bg-transparent aria-disabled:hover:text-ink-muted"
+      className="flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-ink aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:bg-transparent aria-disabled:hover:text-ink-muted aria-pressed:bg-surface-2 aria-pressed:text-accent"
     >
       {children}
     </button>

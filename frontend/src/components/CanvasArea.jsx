@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Background, MarkerType, MiniMap, ReactFlow, useReactFlow } from '@xyflow/react'
 import { useShallow } from 'zustand/react/shallow'
 import { connectionError, findComponentType } from '@systemsim/engine'
@@ -26,6 +26,7 @@ const isValidConnection = (connection) => {
 }
 
 function CanvasArea() {
+  const [showMinimap, setShowMinimap] = useState(false)
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, snapshot, addNode } =
     useArchitectureStore(
       useShallow((s) => ({
@@ -84,11 +85,14 @@ function CanvasArea() {
         colorMode="dark"
       >
         <Background gap={16} />
-        <MiniMap nodeColor={minimapColor} pannable zoomable />
+        {showMinimap && <MiniMap nodeColor={minimapColor} pannable zoomable />}
         {/* Floating panels: top-left menu, top-right settings, bottom-left controls. */}
         <ComponentMenu />
-        <ConfigPanel />
-        <CanvasControls />
+        <ConfigPanel minimapVisible={showMinimap} />
+        <CanvasControls
+          minimapVisible={showMinimap}
+          onToggleMinimap={() => setShowMinimap((shown) => !shown)}
+        />
       </ReactFlow>
 
       {nodes.length === 0 && (
