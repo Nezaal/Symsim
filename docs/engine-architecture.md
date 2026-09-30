@@ -66,12 +66,15 @@ for the worker never changes the result (this is tested).
   - **rejected:** refused by a full queue, a rate limit or a connection limit
   - **timed out:** the deadline passed first
   - **failed** is reserved for failure injection (not yet modeled)
+- **Throughput** counts successes completed *during* the traffic period only.
+  Backlog cleared during drain doesn't count as capacity.
 - **Latency percentiles cover successful requests only.** A rejection answers
   instantly; counting it would make an overloaded system look fast.
 - **Timed-out work:** work already in progress keeps running (wasted effort,
   as in real systems). Work still *queued* for a timed-out request is dropped
-  when its turn comes, and an app server doesn't start new downstream calls
-  for it.
+  when its turn comes, or earlier as soon as it reaches the front of the line.
+  That way dead waiters don't use queue capacity meant for live requests.
+  An app server doesn't start new downstream calls for a timed-out request.
 - **Drain:** traffic stops at `durationSec`. The run continues until nothing is
   in flight, or at most 30 s more, which is enough to settle every deadline.
 
@@ -98,7 +101,8 @@ modeled as **rate-limited delays with unlimited concurrency**. Their
 
 ## Bottleneck analysis
 
-- **Saturated:** utilization ≥ 95%, or any rejections. **Strained:** ≥ 80%.
+- **Saturated:** utilization ≥ 95%, or ≥ 2% of its calls rejected (a few random
+  rejections, e.g. a hot partition, don't count). **Strained:** ≥ 80%.
 - When several components are saturated, the **deepest** one (furthest from
   the client) is reported, and the others are listed as "also saturated".
   Upstream saturation is usually a policy limit (a rate limit) or
@@ -121,7 +125,11 @@ modeled as **rate-limited delays with unlimited concurrency**. Their
 | Duration | 1–3,600 s | rejected by validation |
 | Events processed | 50,000,000 | run stops with an explanation |
 | Requests in flight | 200,000 | run stops ("far past saturation") |
-| Chart points kept in a result | 300 (downsampled) | — |
+| Chart points kept in a result | 300 (downsampled: p95/p99 keep the worst value, p50 is weighted by successes) | — |
+
+Client timeouts are kept in a FIFO line rather than the event heap. Every
+request has the same 30 s timeout, so they arrive in order, and finished
+requests cost nothing.
 
 Runs happen in a worker in ~20 ms slices, so **Stop** takes effect within one
 slice and the UI never freezes. Throughput is roughly 1 million events per second.

@@ -13,6 +13,10 @@ export interface BottleneckReport {
 
 const SATURATED = 0.95
 const STRAINED = 0.8
+/** Refusing at least this share of calls counts as saturated, even at low utilization. */
+const REJECTED_SHARE = 0.02
+
+const rejectedShare = (s: StationTotals): number => (s.handled > 0 ? s.rejected / s.handled : 0)
 
 const fmt = (n: number, digits = 0): string =>
   n.toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: 0 })
@@ -31,7 +35,7 @@ export function findBottleneck(stations: readonly StationTotals[]): BottleneckRe
   const byId = new Map(stations.map((s) => [s.id, s]))
   const candidates = stations.filter((s) => s.type !== 'client')
 
-  const saturated = candidates.filter((s) => s.utilization >= SATURATED || s.rejected > 0)
+  const saturated = candidates.filter((s) => s.utilization >= SATURATED || rejectedShare(s) >= REJECTED_SHARE)
   if (saturated.length > 0) {
     const worst = [...saturated].sort(
       (a, b) => (depth.get(b.id) ?? 0) - (depth.get(a.id) ?? 0) || b.utilization - a.utilization,

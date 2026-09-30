@@ -53,6 +53,7 @@ export class ServerPool {
       return
     }
     this.accumulate()
+    this.dropAbandonedAtHead()
     if (this.busy < this.size) {
       this.busy += 1
       this.started += 1
@@ -89,6 +90,29 @@ export class ServerPool {
     this.busy -= 1
   }
 
+  /** True when acquire() would start or queue work instead of rejecting it. */
+  hasRoom(): boolean {
+    this.dropAbandonedAtHead()
+    return this.busy < this.size || this.queueLength < this.queueCapacity
+  }
+
+  /**
+   * Removes waiters whose requests already timed out from the front of the
+   * line. Deadlines follow arrival order, so dead waiters gather at the front;
+   * clearing them keeps them from using capacity meant for live requests.
+   */
+  private dropAbandonedAtHead(): void {
+    while (this.queueLength > 0) {
+      const head = this.waiting[this.head]!
+      if (!isAbandoned(head.req)) return
+      this.waiting[this.head] = undefined
+      this.head += 1
+      this.dropped += 1
+      this.ctx.schedule(0, head.onDrop)
+    }
+    this.compact()
+  }
+
   /** Busy fraction since the previous call (for per-second charts). */
   sampleUtilization(windowSec: number): number {
     this.accumulate()
@@ -110,7 +134,11 @@ export class ServerPool {
       : { busy: 0, queue: 0 }
   }
 
-  /** Average time spent waiting in line by requests that got a worker from the queue. */
+  /**
+   * Average time spent waiting for a worker, over every request that got one
+   * (immediate starts count as 0). Requests that gave up while waiting are not
+   * included.
+   */
   get averageWaitSec(): number {
     return this.started > 0 ? this.totalWait / this.started : 0
   }

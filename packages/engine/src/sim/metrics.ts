@@ -29,6 +29,8 @@ const toMs = (sec: number): number => Math.round(sec * 1e6) / 1000 // 3 decimals
 export class MetricsCollector {
   total = 0
   ok = 0
+  /** Successes completed before traffic stopped (backlog drained later doesn't count as capacity). */
+  okDuringTraffic = 0
   rejected = 0
   timedOut = 0
   readonly latency = new LatencyHistogram()
@@ -39,13 +41,16 @@ export class MetricsCollector {
   private windowRejected = 0
   private windowTimedOut = 0
 
+  constructor(private readonly durationSec: number) {}
+
   onStart(): void {
     this.total += 1
   }
 
-  onFinish(outcome: Outcome, latencySec: number): void {
+  onFinish(outcome: Outcome, latencySec: number, now: number): void {
     if (outcome === 'ok') {
       this.ok += 1
+      if (now <= this.durationSec) this.okDuringTraffic += 1
       this.windowOk += 1
       this.latency.record(latencySec)
       this.windowLatency.record(latencySec)

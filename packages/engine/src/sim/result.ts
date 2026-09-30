@@ -41,7 +41,8 @@ export function buildResult(sim: Simulator): SimulationResult {
   const stations = sim.trafficTotals ?? [...sim.stations.values()].map((s) => s.totals(sim.elapsed))
   const bottleneck = findBottleneck(stations)
   const errors = m.rejected + m.timedOut
-  const throughputRps = m.ok / durationSec
+  // Measured over the traffic period only; backlog cleared during drain isn't capacity.
+  const throughputRps = m.okDuringTraffic / durationSec
   // Percentiles are monotonic by construction; enforce it against rounding.
   const p50 = toMs(m.latency.percentile(0.5))
   const p95 = Math.max(p50, toMs(m.latency.percentile(0.95)))
@@ -89,6 +90,11 @@ function summarize(
   return `Healthy: ${served}.${note}`
 }
 
+function weightedP50(group: readonly WindowSnapshot[]): number {
+  const ok = group.reduce((sum, w) => sum + w.ok, 0)
+  return ok > 0 ? group.reduce((sum, w) => sum + w.p50Ms * w.ok, 0) / ok : 0
+}
+
 /** Merges consecutive windows so a long run keeps at most `maxPoints` chart points. */
 export function downsample(windows: readonly WindowSnapshot[], maxPoints: number): WindowSnapshot[] {
   if (windows.length <= maxPoints) return [...windows]
@@ -113,9 +119,11 @@ export function downsample(windows: readonly WindowSnapshot[], maxPoints: number
       ok: sum((w) => w.ok),
       rejected: sum((w) => w.rejected),
       timedOut: sum((w) => w.timedOut),
-      p50Ms: avg((w) => w.p50Ms),
-      p95Ms: avg((w) => w.p95Ms),
-      p99Ms: avg((w) => w.p99Ms),
+      // Percentiles can't be averaged: keep the worst tail, weight p50 by
+      // successes, and ignore windows with no successful requests.
+      p50Ms: weightedP50(group),
+      p95Ms: Math.max(0, ...group.map((w) => w.p95Ms)),
+      p99Ms: Math.max(0, ...group.map((w) => w.p99Ms)),
       inFlight: last.inFlight,
       stations,
     })

@@ -45,7 +45,7 @@ export class LimitExceededError extends Error {
 export class Simulator implements SimContext {
   now = 0
   readonly rng: Rng
-  readonly metrics = new MetricsCollector()
+  readonly metrics: MetricsCollector
   readonly stations = new Map<string, Station>()
   /** Hard stop: traffic duration plus drain time. */
   readonly horizon: number
@@ -57,12 +57,20 @@ export class Simulator implements SimContext {
   private nextRequestId = 0
   private finished = false
   private readonly events = new EventQueue<() => void>()
+  /**
+   * Client timeouts. Every request gets the same 30 s timeout, so these
+   * deadlines arrive in start order: a plain FIFO replaces millions of heap
+   * entries, and requests that already finished are skipped at no cost.
+   */
+  private clientTimeouts: (SimRequest | undefined)[] = []
+  private timeoutHead = 0
 
   constructor(
     readonly model: SimModel,
     private readonly limits: SimLimits = LIMITS,
   ) {
     this.rng = createRng(model.seed)
+    this.metrics = new MetricsCollector(model.durationSec)
     this.horizon = model.durationSec + DRAIN_SEC
     for (const spec of model.stations) this.stations.set(spec.id, createStation(spec, this))
     for (const spec of model.stations) if (spec.type === 'client') this.startClient(spec)
@@ -102,16 +110,24 @@ export class Simulator implements SimContext {
   // ── Running ────────────────────────────────────────────────────────────────
 
   get done(): boolean {
-    return this.finished || this.events.peekTime() > this.horizon
+    return this.finished || Math.min(this.events.peekTime(), this.nextClientTimeout()) > this.horizon
   }
 
   /** Processes up to `maxEvents` events. Returns true once the run is complete. */
   advance(maxEvents: number): boolean {
     let processed = 0
     while (processed < maxEvents && !this.done) {
-      const event = this.events.pop()!
-      this.now = event.time
-      event.payload()
+      const timeoutAt = this.nextClientTimeout()
+      if (timeoutAt < this.events.peekTime()) {
+        const req = this.clientTimeouts[this.timeoutHead]!
+        this.popClientTimeout()
+        this.now = timeoutAt
+        this.finish(req, 'timed_out')
+      } else {
+        const event = this.events.pop()!
+        this.now = event.time
+        event.payload()
+      }
       processed += 1
       this.eventsProcessed += 1
       if (this.eventsProcessed > this.limits.maxEvents) {
@@ -179,10 +195,30 @@ export class Simulator implements SimContext {
       background: false,
     }
     this.metrics.onStart()
-    this.scheduleTimeout(req)
+    this.clientTimeouts.push(req)
     this.call(target, req, (outcome) => this.finish(req, outcome))
   }
 
+  /** Time of the next client timeout that still matters (skips finished requests). */
+  private nextClientTimeout(): number {
+    for (;;) {
+      const req = this.clientTimeouts[this.timeoutHead]
+      if (req === undefined) return Infinity
+      if (!req.finished) return req.start + CLIENT_TIMEOUT_SEC
+      this.popClientTimeout()
+    }
+  }
+
+  private popClientTimeout(): void {
+    this.clientTimeouts[this.timeoutHead] = undefined
+    this.timeoutHead += 1
+    if (this.timeoutHead > 4096 && this.timeoutHead * 2 > this.clientTimeouts.length) {
+      this.clientTimeouts = this.clientTimeouts.slice(this.timeoutHead)
+      this.timeoutHead = 0
+    }
+  }
+
+  /** Heap timeout for a deadline tightened by a gateway (not in start order). */
   private scheduleTimeout(req: SimRequest): void {
     this.events.push(req.deadline, () => {
       if (!req.finished && this.now >= req.deadline) this.finish(req, 'timed_out')
@@ -194,7 +230,7 @@ export class Simulator implements SimContext {
     if (req.finished) return
     req.finished = true
     this.inFlight -= 1
-    this.metrics.onFinish(outcome, this.now - req.start)
+    this.metrics.onFinish(outcome, this.now - req.start, this.now)
   }
 
   private closeWindow(): void {

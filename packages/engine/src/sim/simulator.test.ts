@@ -98,6 +98,13 @@ describe('Simulator: determinism', () => {
     expect(a.metrics.latency.mean).not.toBe(b.metrics.latency.mean)
   })
 
+  it('does not spend events on timeouts of requests that already finished', () => {
+    // Per request: arrival, compute done, reply. Timeout checks for finished
+    // requests must cost nothing (they used to add a heap event each).
+    const sim = simulate(mmc(4, 200, 5), { durationSec: 60, seed: 1 })
+    expect(sim.eventsProcessed / sim.metrics.total).toBeLessThan(3.1)
+  })
+
   it('stops early once traffic ends and everything has drained', () => {
     const sim = simulate(mmc(4, 10, 10), { durationSec: 20, seed: 1 })
     expect(sim.elapsed).toBeLessThan(sim.horizon)

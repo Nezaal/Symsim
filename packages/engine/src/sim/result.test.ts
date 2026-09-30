@@ -83,6 +83,36 @@ describe('buildResult', () => {
     expect(result.bottleneck?.explanation).toMatch(/blocked waiting on/)
   })
 
+  it('does not credit backlog drained after traffic stops to throughput', () => {
+    // Capacity 100 req/s, offered 150 req/s: a backlog builds, then drains
+    // after traffic ends. Throughput must reflect capacity, not 150.
+    const result = run(
+      {
+        nodes: [
+          node('c', 'client', { requestsPerSecond: 150 }),
+          node('app', 'appServer', { instances: 1, maxConcurrency: 1, cpuCores: 1, queueCapacity: 100_000, serviceTimeMs: 10 }),
+        ],
+        edges: [edge('c', 'app')],
+      },
+      { durationSec: 20, seed: 2 },
+    )
+    expect(result.throughputRps).toBeLessThan(105)
+  })
+
+  it('does not call a component saturated for a handful of random rejections', () => {
+    const result = run(
+      {
+        nodes: [node('c', 'client', { requestsPerSecond: 4 }), node('kv', 'nosqlDatabase', { maxOpsPerSec: 1024, partitions: 1024 })],
+        edges: [edge('c', 'kv')],
+      },
+      { durationSec: 60, seed: 3 },
+    )
+    const kv = result.stations.find((s) => s.id === 'kv')!
+    expect(kv.rejected).toBeGreaterThan(0)
+    expect(kv.rejected / kv.handled).toBeLessThan(0.02)
+    expect(result.bottleneck?.severity).not.toBe('saturated')
+  })
+
   it('produces DB-compatible numbers', () => {
     const r = run(template(5_000), { durationSec: 10, seed: 3 })
     expect(r.successfulRequests + r.failedRequests + r.rejectedRequests + r.timedOutRequests).toBeLessThanOrEqual(
@@ -104,5 +134,14 @@ describe('downsample', () => {
   it('leaves short series untouched', () => {
     const windows = [{ t: 1, throughputRps: 1, ok: 1, rejected: 0, timedOut: 0, p50Ms: 1, p95Ms: 1, p99Ms: 1, inFlight: 0, stations: {} }]
     expect(downsample(windows, 10)).toEqual(windows)
+  })
+
+  it('keeps tail latency when merging windows (max, not average; empty windows ignored)', () => {
+    const w = (t: number, ok: number, p50Ms: number, p99Ms: number) => ({
+      t, throughputRps: ok, ok, rejected: 0, timedOut: 0, p50Ms, p95Ms: p99Ms, p99Ms, inFlight: 0, stations: {},
+    })
+    const [merged] = downsample([w(1, 10, 10, 100), w(2, 0, 0, 0), w(3, 30, 20, 500)], 1)
+    expect(merged?.p99Ms).toBe(500)
+    expect(merged?.p50Ms).toBeCloseTo(17.5) // weighted by successful requests: (10·10 + 20·30) / 40
   })
 })

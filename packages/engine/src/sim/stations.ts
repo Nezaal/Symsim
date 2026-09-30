@@ -439,8 +439,8 @@ class MessageQueueStation extends BaseStation {
 
   handle(req: SimRequest, reply: Reply): void {
     this.handled += 1
+    if (!this.consumers.hasRoom()) return this.reject(reply)
     const job = this.ctx.createBackgroundRequest(req.kind)
-    let accepted = true
     this.consumers.acquire(
       job,
       () =>
@@ -451,19 +451,10 @@ class MessageQueueStation extends BaseStation {
           this.consumers.release()
           this.ctx.backgroundDone()
         }),
-      () => {
-        accepted = false
-        this.rejectedCalls += 1
-        this.ctx.backgroundDone()
-        reply('rejected')
-      },
+      () => this.ctx.backgroundDone(), // unreachable: room was checked just above
       () => this.ctx.backgroundDone(),
     )
-    // acquire() defers rejections by one event, so `accepted` is still true
-    // here even for a full queue; decide at reply time instead.
-    this.ctx.schedule(this.latency, () => {
-      if (accepted) reply('ok')
-    })
+    this.ctx.schedule(this.latency, () => reply('ok'))
   }
 
   sample(windowSec: number): StationSample {
