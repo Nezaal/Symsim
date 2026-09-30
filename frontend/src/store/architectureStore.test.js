@@ -107,6 +107,23 @@ describe('onConnect', () => {
   })
 })
 
+describe('deselectAll', () => {
+  it('clears node and edge selection without creating an undo step', () => {
+    const a = store().addNode('client', { x: 0, y: 0 })
+    const b = store().addNode('appServer', { x: 0, y: 0 })
+    store().onConnect({ source: a, target: b })
+    store().onEdgesChange([{ id: store().edges[0].id, type: 'select', selected: true }])
+    select([a])
+    const pastLength = store().past.length
+
+    store().deselectAll()
+
+    expect(store().nodes.some((n) => n.selected)).toBe(false)
+    expect(store().edges.some((e) => e.selected)).toBe(false)
+    expect(store().past).toHaveLength(pastLength)
+  })
+})
+
 describe('deleteSelected', () => {
   it('removes selected nodes and their edges', () => {
     const a = store().addNode('client', { x: 0, y: 0 })

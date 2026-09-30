@@ -1,6 +1,5 @@
 import { getComponentType } from '@systemsim/engine'
 import { MAX_LABEL_LENGTH, useArchitectureStore } from '../store/architectureStore.js'
-import { categoryColor } from '../lib/categories.js'
 import NumberField from './fields/NumberField.jsx'
 import SelectField from './fields/SelectField.jsx'
 import TextField from './fields/TextField.jsx'
@@ -23,17 +22,9 @@ function NodeSettings({ node }) {
   // onBlur bubbles up from any field (after the field's own blur commit), so
   // leaving a field closes its editing session: the next edit is a new undo step.
   return (
-    <div className="space-y-4" onBlur={endEdit}>
-      <header>
-        <p className="flex items-center gap-1.5 text-xs text-ink-muted">
-          <span
-            className="size-2 rounded-full"
-            style={{ backgroundColor: categoryColor(def.category) }}
-          />
-          {def.label}
-        </p>
-        <p className="mt-1 text-xs text-ink-muted">{def.description}</p>
-      </header>
+    <div className="space-y-3" onBlur={endEdit}>
+      {/* The panel header already shows the icon and type name. */}
+      <p className="text-xs text-ink-muted">{def.description}</p>
 
       <TextField
         label="Name"

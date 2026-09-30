@@ -121,6 +121,14 @@ export const useArchitectureStore = create((set, get) => ({
     return node.id
   },
 
+  /** Clears the selection (closes the settings panel). Selection isn't undoable, so not recorded. */
+  deselectAll: () =>
+    set((state) => ({
+      nodes: state.nodes.map(deselect),
+      edges: state.edges.map(deselect),
+      lastEditKey: null,
+    })),
+
   /** Ends the current editing session, so the next edit of the same field is a new undo step. */
   endEdit: () => set({ lastEditKey: null }),
 

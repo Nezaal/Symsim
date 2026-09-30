@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { Background, Controls, MarkerType, MiniMap, ReactFlow, useReactFlow } from '@xyflow/react'
+import { Background, MarkerType, MiniMap, ReactFlow, useReactFlow } from '@xyflow/react'
 import { useShallow } from 'zustand/react/shallow'
 import { connectionError, findComponentType } from '@systemsim/engine'
 import { useArchitectureStore } from '../store/architectureStore.js'
@@ -8,6 +8,8 @@ import { COMPONENT_DRAG_MIME } from '../lib/dragAndDrop.js'
 import ComponentNode from './ComponentNode.jsx'
 import TemplatePicker from './TemplatePicker.jsx'
 import ComponentMenu from './ComponentMenu.jsx'
+import ConfigPanel from './ConfigPanel.jsx'
+import CanvasControls from './CanvasControls.jsx'
 
 // Defined outside the component so React Flow sees the same object every render.
 const nodeTypes = { component: ComponentNode }
@@ -82,9 +84,11 @@ function CanvasArea() {
         colorMode="dark"
       >
         <Background gap={16} />
-        <Controls />
         <MiniMap nodeColor={minimapColor} pannable zoomable />
+        {/* Floating panels: top-left menu, top-right settings, bottom-left controls. */}
         <ComponentMenu />
+        <ConfigPanel />
+        <CanvasControls />
       </ReactFlow>
 
       {nodes.length === 0 && (

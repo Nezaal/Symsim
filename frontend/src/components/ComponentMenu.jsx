@@ -5,8 +5,8 @@ import { useArchitectureStore } from '../store/architectureStore.js'
 import { isTypingTarget } from '../hooks/shortcuts.js'
 import Palette from './Palette.jsx'
 
-// Leave room at the bottom for React Flow's zoom controls (bottom-left).
-const PANEL_STYLE = { maxHeight: 'calc(100% - 8rem)' }
+// Leave room at the bottom for the zoom/undo bar (bottom-left, ~40px + margins).
+const PANEL_STYLE = { maxHeight: 'calc(100% - 5rem)' }
 
 /**
  * Excalidraw-style menu: a small ☰ button in the canvas corner that reveals
