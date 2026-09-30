@@ -15,6 +15,7 @@
     "@systemsim/engine": "^0.0.0",
     "@tailwindcss/vite": "^4.3.3",
     "@xyflow/react": "^12.12.0",
+    "lucide-react": "^1.49.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1",

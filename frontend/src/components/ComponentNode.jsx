@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { getComponentType } from '@systemsim/engine'
 import { categoryColor } from '../lib/categories.js'
+import ComponentIcon from './ComponentIcon.jsx'
 
 /**
  * Renders every node on the canvas. Which handles (connection dots) appear is
@@ -14,17 +15,21 @@ function ComponentNode({ data, selected }) {
   const def = getComponentType(data.componentType)
   const summary = def.summary(data.config)
   const renamed = data.label !== def.label
+  const color = categoryColor(def.category)
 
   return (
     <div
       className={`w-44 rounded-md border border-l-4 bg-surface-2 px-3 py-2 shadow-md ${
         selected ? 'border-accent ring-1 ring-accent' : 'border-line'
       }`}
-      style={{ borderLeftColor: categoryColor(def.category) }}
+      style={{ borderLeftColor: color }}
     >
       {def.acceptsInput && <Handle type="target" position={Position.Left} />}
 
-      <div className="truncate text-sm font-medium text-ink">{data.label}</div>
+      <div className="flex items-center gap-1.5">
+        <ComponentIcon type={data.componentType} size={14} color={color} />
+        <span className="truncate text-sm font-medium text-ink">{data.label}</span>
+      </div>
       <div className="truncate text-xs text-ink-muted">
         {renamed && `${def.label} · `}
         {summary}

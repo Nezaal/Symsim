@@ -33,7 +33,7 @@ function TemplatePicker() {
       </ul>
 
       <p className="text-center text-xs text-ink-muted">
-        …or drag components from the left panel to start from a blank canvas.
+        …or add components from the ☰ menu to start from a blank canvas.
       </p>
     </div>
   )

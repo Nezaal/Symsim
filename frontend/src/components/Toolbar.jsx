@@ -3,9 +3,9 @@ import { ghostButton } from '../lib/buttonStyles.js'
 import TemplatesMenu from './TemplatesMenu.jsx'
 
 /**
- * @param {{ onTogglePalette: () => void, onToggleMetrics: () => void }} props
+ * @param {{ onToggleMetrics: () => void }} props
  */
-function Toolbar({ onTogglePalette, onToggleMetrics }) {
+function Toolbar({ onToggleMetrics }) {
   const canUndo = useArchitectureStore((s) => s.past.length > 0)
   const canRedo = useArchitectureStore((s) => s.future.length > 0)
   const undo = useArchitectureStore((s) => s.undo)
@@ -13,15 +13,6 @@ function Toolbar({ onTogglePalette, onToggleMetrics }) {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
-      <button
-        type="button"
-        onClick={onTogglePalette}
-        className={ghostButton}
-        title="Toggle components"
-        aria-label="Toggle components panel"
-      >
-        ☰
-      </button>
       <h1 className="text-sm font-semibold tracking-tight">SystemSim</h1>
 
       <div className="ml-4 flex items-center gap-1">

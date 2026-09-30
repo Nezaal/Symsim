@@ -4,6 +4,7 @@ import { COMPONENT_TYPES } from '@systemsim/engine'
 import { useArchitectureStore } from '../store/architectureStore.js'
 import { CATEGORY_META, CATEGORY_ORDER, categoryColor } from '../lib/categories.js'
 import { COMPONENT_DRAG_MIME } from '../lib/dragAndDrop.js'
+import ComponentIcon from './ComponentIcon.jsx'
 
 const GROUPS = CATEGORY_ORDER.map((category) => ({
   category,
@@ -23,11 +24,11 @@ function onDragStart(event, type) {
 }
 
 /**
- * Left sidebar listing the components you can add. Drag onto the canvas, or
- * click (or press Enter) to add at the center of the current view.
- * @param {{ open: boolean }} props
+ * The list of components you can add, shown inside the floating ComponentMenu.
+ * Drag a row onto the canvas, or click it (or press Enter) to add it at the
+ * center of the current view.
  */
-function Palette({ open }) {
+function Palette() {
   const addNode = useArchitectureStore((s) => s.addNode)
   const nodeCount = useArchitectureStore((s) => s.nodes.length)
   const { getViewport } = useReactFlow()
@@ -46,23 +47,14 @@ function Palette({ open }) {
     [getViewport, addNode, nodeCount, paneWidth, paneHeight],
   )
 
-  if (!open) return null
-
   return (
-    <aside aria-label="Components" className="w-56 shrink-0 overflow-y-auto border-r border-line bg-surface p-3">
-      <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-muted">
-        Components
-      </h2>
+    <div>
       {GROUPS.map(({ category, types }) => (
-        <section key={category} className="mb-4">
-          <h3 className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
-            <span
-              className="size-2 rounded-full"
-              style={{ backgroundColor: categoryColor(category) }}
-            />
+        <section key={category}>
+          <h3 className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-ink-muted">
             {CATEGORY_META[category].label}
           </h3>
-          <ul className="space-y-1">
+          <ul>
             {types.map((def) => (
               <li key={def.type}>
                 <button
@@ -71,8 +63,9 @@ function Palette({ open }) {
                   onDragStart={(event) => onDragStart(event, def.type)}
                   onClick={() => addAtCenter(def.type)}
                   title={def.description}
-                  className="w-full cursor-grab rounded-md border border-line bg-surface-2 px-3 py-1.5 text-left text-sm hover:border-ink-muted active:cursor-grabbing"
+                  className="flex w-full cursor-grab items-center gap-2 rounded-md px-2 py-1 text-left text-sm text-ink hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none active:cursor-grabbing"
                 >
+                  <ComponentIcon type={def.type} color={categoryColor(category)} />
                   {def.label}
                 </button>
               </li>
@@ -80,7 +73,7 @@ function Palette({ open }) {
           </ul>
         </section>
       ))}
-    </aside>
+    </div>
   )
 }
 

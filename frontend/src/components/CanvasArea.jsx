@@ -7,6 +7,7 @@ import { categoryColor } from '../lib/categories.js'
 import { COMPONENT_DRAG_MIME } from '../lib/dragAndDrop.js'
 import ComponentNode from './ComponentNode.jsx'
 import TemplatePicker from './TemplatePicker.jsx'
+import ComponentMenu from './ComponentMenu.jsx'
 
 // Defined outside the component so React Flow sees the same object every render.
 const nodeTypes = { component: ComponentNode }
@@ -83,6 +84,7 @@ function CanvasArea() {
         <Background gap={16} />
         <Controls />
         <MiniMap nodeColor={minimapColor} pannable zoomable />
+        <ComponentMenu />
       </ReactFlow>
 
       {nodes.length === 0 && (
