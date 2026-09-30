@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
+import { useSearchParams } from 'react-router'
+import { useAuthStore } from '../store/authStore.js'
 import Toolbar from '../components/Toolbar.jsx'
 import CanvasArea from '../components/CanvasArea.jsx'
 import ResultsOverlay from '../components/results/ResultsOverlay.jsx'
@@ -27,6 +30,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js'
  */
 function EditorPage() {
   useKeyboardShortcuts()
+  useOpenSignInFromUrl()
 
   return (
     <ReactFlowProvider>
@@ -39,6 +43,18 @@ function EditorPage() {
       <ResultsOverlay />
     </ReactFlowProvider>
   )
+}
+
+/** The landing page links to /app?signin=1: open the dialog, then tidy the URL. */
+function useOpenSignInFromUrl() {
+  const [params, setParams] = useSearchParams()
+  const openSignIn = useAuthStore((s) => s.openSignIn)
+  const status = useAuthStore((s) => s.status)
+  useEffect(() => {
+    if (params.get('signin') !== '1' || status === 'loading') return
+    if (status === 'signedOut') openSignIn()
+    setParams({}, { replace: true })
+  }, [params, setParams, openSignIn, status])
 }
 
 export default EditorPage

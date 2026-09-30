@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
+import { useAuthStore } from './store/authStore.js'
+import SignInDialog from './components/auth/SignInDialog.jsx'
 import LandingPage from './pages/LandingPage.jsx'
 import EditorPage from './pages/EditorPage.jsx'
 
@@ -10,6 +13,20 @@ import EditorPage from './pages/EditorPage.jsx'
  *   /s/:token         read-only shared design (added with share links)
  */
 function App() {
+  const initAuth = useAuthStore((s) => s.init)
+  useEffect(() => {
+    initAuth()
+  }, [initAuth])
+
+  return (
+    <>
+      <AppRoutes />
+      <SignInDialog />
+    </>
+  )
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
