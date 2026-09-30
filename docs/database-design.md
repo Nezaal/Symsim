@@ -8,6 +8,11 @@
 - **Security model:** Row Level Security on every table. The browser talks to the
   database directly, and Postgres enforces access on every request.
 - **Schema source of truth:** migration files in `supabase/migrations/`, in git.
+- **Where the engine runs:** in the browser, in a Web Worker. There is no separate
+  backend service: the app is the frontend (Vercel) plus Supabase. Simulations and
+  results are written by the user's own client, and RLS limits each user to their own
+  rows. `packages/engine` stays framework-free, so it can later run server-side
+  (Edge Functions or Node) if verified results or long runs are needed.
 
 ### MVP entities
 
