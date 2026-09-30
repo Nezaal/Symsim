@@ -10,6 +10,8 @@
  *   percentages → 0–100
  */
 
+import { deepFreeze } from './freeze.ts'
+
 export type ComponentTypeId =
   | 'client'
   | 'apiGateway'
@@ -258,15 +260,6 @@ const DEFINITIONS: ComponentTypeDef[] = [
     summary: (c) => `${fmt(c.hitRatePct)}% hit`,
   },
 ]
-
-/** Object.freeze is shallow, so walk into nested arrays/objects too. */
-function deepFreeze<T>(value: T): T {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const child of Object.values(value)) deepFreeze(child)
-    Object.freeze(value)
-  }
-  return value
-}
 
 export const COMPONENT_TYPES: readonly ComponentTypeDef[] = deepFreeze(DEFINITIONS)
 
