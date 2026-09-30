@@ -7,6 +7,7 @@ import CanvasArea from '../components/CanvasArea.jsx'
 import ResultsOverlay from '../components/results/ResultsOverlay.jsx'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js'
 import { useEditorSession } from '../hooks/useEditorSession.js'
+import { useRunPersistence } from '../hooks/useRunPersistence.js'
 import SaveDialog from '../components/project/SaveDialog.jsx'
 
 /**
@@ -35,6 +36,7 @@ function EditorPage() {
   useKeyboardShortcuts()
   useOpenSignInFromUrl()
   useEditorSession(projectId ?? null)
+  useRunPersistence()
 
   return (
     <ReactFlowProvider>

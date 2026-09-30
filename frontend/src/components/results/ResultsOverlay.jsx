@@ -10,6 +10,7 @@ import { SERIES } from '../../lib/vizTokens.js'
 import RunControls from '../RunControls.jsx'
 import TimeSeriesChart from './TimeSeriesChart.jsx'
 import { KpiTiles, UtilizationList, Verdict } from './ResultPanels.jsx'
+import RunSaveStatus from './RunSaveStatus.jsx'
 
 const STATUS_TEXT = {
   running: 'Running…',
@@ -118,6 +119,7 @@ function ResultsBody({ windows, progress, result }) {
     <>
       <KpiTiles totals={progress?.totals} result={result} />
       {result && <Verdict result={result} />}
+      <RunSaveStatus />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="h-80">
           <TimeSeriesChart title="Throughput (successful req/s)" data={windows} series={THROUGHPUT_SERIES} formatValue={formatRps} />

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { MAX_DURATION_SEC, randomSeed } from '@systemsim/engine'
+import { workloadFromGraph } from '../lib/projectsApi.js'
 
 const DEFAULT_DURATION_SEC = 60
 const MAX_SEED = 0xffffffff
@@ -69,6 +70,13 @@ export function createSimulationStore(workerFactory = createWorker) {
       drawerOpen: false,
       /** Design revision (architecture store) the latest run was started for. */
       runRevision: null,
+      /** Options, workload and timing of the latest run, kept for saving it. */
+      runOptions: null,
+      runWorkload: null,
+      startedAt: null,
+      finishedAt: null,
+      /** Saving the latest run: idle | saving | saved | error. */
+      runSave: { status: 'idle' },
 
       /** @param {number} [revision] design revision being simulated (for staleness checks) */
       start: (nodes, edges, revision = null) => {
@@ -77,6 +85,11 @@ export function createSimulationStore(workerFactory = createWorker) {
           status: 'running',
           runId,
           runRevision: revision,
+          runOptions: get().options,
+          runWorkload: workloadFromGraph({ nodes }),
+          startedAt: new Date().toISOString(),
+          finishedAt: null,
+          runSave: { status: 'idle' },
           progress: null,
           windows: [],
           result: null,
@@ -117,6 +130,11 @@ export function createSimulationStore(workerFactory = createWorker) {
 
       newSeed: () => set((state) => ({ options: { ...state.options, seed: randomSeed() } })),
 
+      /** Updates the save state, unless a newer run has started meanwhile. */
+      setRunSave: (runId, runSave) => {
+        if (runId === get().runId) set({ runSave })
+      },
+
       openDrawer: () => set({ drawerOpen: true }),
       closeDrawer: () => set({ drawerOpen: false }),
 
@@ -131,7 +149,7 @@ export function createSimulationStore(workerFactory = createWorker) {
             break
           }
           case 'done':
-            set({ status: 'done', result: message.result })
+            set({ status: 'done', result: message.result, finishedAt: new Date().toISOString() })
             break
           case 'invalid':
             set({

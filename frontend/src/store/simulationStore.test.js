@@ -108,6 +108,28 @@ describe('simulation store', () => {
     expect(store.getState().runRevision).toBe(42)
   })
 
+  it('keeps what is needed to save the run: options used, workload and timing', () => {
+    const client = { id: 'c', data: { componentType: 'client', label: 'Users', config: { requestsPerSecond: 50 } } }
+    store.getState().start([client], [], 3)
+    store.getState().setOptions({ durationSec: 99 }) // changing settings later doesn't alter this run
+    const { runId, runOptions, runWorkload, startedAt } = store.getState()
+    expect(runOptions.durationSec).toBe(60)
+    expect(runWorkload.clients).toEqual([{ id: 'c', requestsPerSecond: 50 }])
+    expect(Date.parse(startedAt)).not.toBeNaN()
+    worker.reply({ type: 'done', runId, result: {} })
+    expect(Date.parse(store.getState().finishedAt)).not.toBeNaN()
+  })
+
+  it('tracks whether the run was saved, only for the current run', () => {
+    store.getState().start(graph.nodes, graph.edges)
+    const { runId } = store.getState()
+    expect(store.getState().runSave).toEqual({ status: 'idle' })
+    store.getState().setRunSave(runId - 1, { status: 'saved' })
+    expect(store.getState().runSave.status).toBe('idle')
+    store.getState().setRunSave(runId, { status: 'saved', versionNumber: 2 })
+    expect(store.getState().runSave).toEqual({ status: 'saved', versionNumber: 2 })
+  })
+
   it('validates run options before storing them', () => {
     store.getState().setOptions({ durationSec: 99999, seed: -5 })
     expect(store.getState().options).toEqual({ durationSec: 3600, seed: 0 })
