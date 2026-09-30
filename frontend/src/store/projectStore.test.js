@@ -23,6 +23,7 @@ function fakeApi() {
       version: { id: 'v9', version_number: 3, graph: serializeGraph([], []) },
     })),
     listMyProjects: vi.fn(async () => [{ id: 'p1', name: 'A' }]),
+    createShareLink: vi.fn(async () => ({ token: 'abc123' })),
   }
 }
 
@@ -87,6 +88,19 @@ describe('project store', () => {
     store.getState().newDesign()
     expect(store.getState()).toMatchObject({ project: null, version: null, savedRevision: null })
     expect(architecture.getState().nodes).toHaveLength(0)
+  })
+
+  it('creates a share link for the saved version', async () => {
+    await store.getState().saveVersion({ name: 'X' })
+    const url = await store.getState().createShareLink('https://systemsim.app')
+    expect(api.createShareLink).toHaveBeenCalledWith('v1')
+    expect(url).toBe('https://systemsim.app/s/abc123')
+    expect(store.getState().shareUrl).toBe(url)
+  })
+
+  it('cannot share before anything is saved', async () => {
+    expect(await store.getState().createShareLink('https://x')).toBeNull()
+    expect(api.createShareLink).not.toHaveBeenCalled()
   })
 
   it('forgets the project on sign-out but keeps the canvas', async () => {

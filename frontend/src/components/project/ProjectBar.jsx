@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore.js'
 import { useHasUnsavedChanges, useProjectStore } from '../../store/projectStore.js'
 import { ghostButton } from '../../lib/buttonStyles.js'
 import { requestSave } from '../../lib/requestSave.js'
+import ShareButton from './ShareButton.jsx'
 
 const DISCARD_WARNING = 'You have unsaved changes. Discard them?'
 
@@ -33,6 +34,7 @@ function ProjectBar() {
       <button type="button" onClick={requestSave} className={`${ghostButton} flex items-center gap-1.5`} title="Save version (Ctrl+S)">
         <Save size={14} aria-hidden="true" /> Save
       </button>
+      {authStatus === 'signedIn' && <ShareButton />}
       {authStatus === 'signedIn' && <ProjectsMenu />}
       {error && (
         <span role="alert" className="flex items-center gap-1 text-xs text-red-400">

@@ -33,6 +33,8 @@ export function createProjectStore({ api = projectsApi, architecture = useArchit
     saveDialogOpen: false,
     projects: [],
     projectsStatus: 'idle',
+    /** Last share link created in this session. */
+    shareUrl: null,
 
     /** Saves the current design as a new version, creating the project first if needed. */
     saveVersion: async ({ name, message } = {}) => {
@@ -78,9 +80,25 @@ export function createProjectStore({ api = projectsApi, architecture = useArchit
       }
     },
 
+    /** Read-only public link to the latest saved version. Returns the URL, or null. */
+    createShareLink: async (origin) => {
+      const version = get().version
+      if (!version) return null
+      set({ busy: true, error: null })
+      try {
+        const link = await api.createShareLink(version.id)
+        const shareUrl = `${origin}/s/${link.token}`
+        set({ busy: false, shareUrl })
+        return shareUrl
+      } catch (error) {
+        set({ busy: false, error: friendly(error, "Couldn't create a share link.") })
+        return null
+      }
+    },
+
     newDesign: () => {
       architecture.getState().replaceGraph([], [])
-      set({ project: null, version: null, savedRevision: null, error: null })
+      set({ project: null, version: null, savedRevision: null, error: null, shareUrl: null })
     },
 
     loadMyProjects: async (userId) => {
@@ -93,7 +111,8 @@ export function createProjectStore({ api = projectsApi, architecture = useArchit
     },
 
     /** Signed out: forget the project association, keep whatever is on the canvas. */
-    reset: () => set({ project: null, version: null, savedRevision: null, projects: [], projectsStatus: 'idle' }),
+    reset: () =>
+      set({ project: null, version: null, savedRevision: null, projects: [], projectsStatus: 'idle', shareUrl: null }),
 
     openSaveDialog: () => set({ saveDialogOpen: true, error: null }),
     closeSaveDialog: () => set({ saveDialogOpen: false }),

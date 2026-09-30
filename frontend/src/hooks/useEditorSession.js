@@ -30,13 +30,14 @@ export function useEditorSession(routeProjectId) {
   useEffect(() => {
     if (routeProjectId || authStatus === 'loading' || draftRestored) return
     draftRestored = true
+    // Something is already on the canvas (e.g. "Open a copy" from a share link): keep it.
+    if (useArchitectureStore.getState().nodes.length > 0) return
     const draft = loadDraft()
     if (!draft) return
     if (draft.projectId && authStatus === 'signedIn') {
       navigate(`/app/p/${draft.projectId}`, { replace: true })
       return
     }
-    if (useArchitectureStore.getState().nodes.length > 0) return
     try {
       const graph = deserializeGraph(draft.graph)
       useArchitectureStore.getState().replaceGraph(graph.nodes, graph.edges)
