@@ -1,4 +1,4 @@
-# SystemSim database design
+#      SystemSim database design
 
 ## Foundations (decided)
 
