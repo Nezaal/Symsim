@@ -20,7 +20,12 @@ const BURST_CYCLE_SEC = 30
 const BURST_LENGTH_SEC = 10
 const BURST_MULTIPLIER = 3
 
-export const LIMITS = Object.freeze({
+export interface SimLimits {
+  readonly maxEvents: number
+  readonly maxInFlight: number
+}
+
+export const LIMITS: SimLimits = Object.freeze({
   maxEvents: 50_000_000,
   maxInFlight: 200_000,
 })
@@ -53,7 +58,10 @@ export class Simulator implements SimContext {
   private finished = false
   private readonly events = new EventQueue<() => void>()
 
-  constructor(readonly model: SimModel) {
+  constructor(
+    readonly model: SimModel,
+    private readonly limits: SimLimits = LIMITS,
+  ) {
     this.rng = createRng(model.seed)
     this.horizon = model.durationSec + DRAIN_SEC
     for (const spec of model.stations) this.stations.set(spec.id, createStation(spec, this))
@@ -106,9 +114,9 @@ export class Simulator implements SimContext {
       event.payload()
       processed += 1
       this.eventsProcessed += 1
-      if (this.eventsProcessed > LIMITS.maxEvents) {
+      if (this.eventsProcessed > this.limits.maxEvents) {
         throw new LimitExceededError(
-          `Simulation stopped after ${LIMITS.maxEvents.toLocaleString('en-US')} events. Try a shorter duration or less traffic.`,
+          `Simulation stopped after ${this.limits.maxEvents.toLocaleString('en-US')} events. Try a shorter duration or less traffic.`,
         )
       }
     }
@@ -157,9 +165,9 @@ export class Simulator implements SimContext {
 
   private startRequest(target: string, kind: RequestKind): void {
     this.inFlight += 1
-    if (this.inFlight > LIMITS.maxInFlight) {
+    if (this.inFlight > this.limits.maxInFlight) {
       throw new LimitExceededError(
-        `More than ${LIMITS.maxInFlight.toLocaleString('en-US')} requests in flight at once. The system is far past saturation; reduce traffic.`,
+        `More than ${this.limits.maxInFlight.toLocaleString('en-US')} requests in flight at once. The system is far past saturation; reduce traffic.`,
       )
     }
     const req: SimRequest = {

@@ -1,0 +1,10 @@
+// Public API of the simulation engine.
+export { compileSimulation, MAX_DURATION_SEC } from './compile.ts'
+export { randomSeed } from './random.ts'
+export { LIMITS, LimitExceededError, CLIENT_TIMEOUT_SEC, type SimLimits } from './simulator.ts'
+export { SimulationRun, startSimulation, runSimulation, type ProgressUpdate, type StartResult, type RunResult } from './run.ts'
+export type { SimulationResult } from './result.ts'
+export type { BottleneckReport } from './bottleneck.ts'
+export type { WindowSnapshot } from './metrics.ts'
+export type { StationTotals, StationSample } from './stations.ts'
+export type { GraphInput, RunOptions, ValidationError, SimModel } from './types.ts'
