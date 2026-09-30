@@ -2,7 +2,13 @@ import { EventQueue } from './eventQueue.ts'
 import { MetricsCollector } from './metrics.ts'
 import { createRng, type Rng } from './random.ts'
 import { RoundRobin } from './resources.ts'
-import { ClientStation, createStation, type Station, type StationSample } from './stations.ts'
+import {
+  ClientStation,
+  createStation,
+  type Station,
+  type StationSample,
+  type StationTotals,
+} from './stations.ts'
 import type { Outcome, Reply, RequestKind, SimContext, SimModel, SimRequest, StationSpec } from './types.ts'
 
 /** Clients give up on a request after this long (a typical HTTP client timeout). */
@@ -40,6 +46,8 @@ export class Simulator implements SimContext {
   readonly horizon: number
   eventsProcessed = 0
   inFlight = 0
+  /** Per-component totals captured when traffic stops (drain time excluded). */
+  trafficTotals: StationTotals[] | null = null
   private backgroundInFlight = 0
   private nextRequestId = 0
   private finished = false
@@ -51,6 +59,9 @@ export class Simulator implements SimContext {
     for (const spec of model.stations) this.stations.set(spec.id, createStation(spec, this))
     for (const spec of model.stations) if (spec.type === 'client') this.startClient(spec)
     this.schedule(1, () => this.closeWindow())
+    this.schedule(model.durationSec, () => {
+      this.trafficTotals = [...this.stations.values()].map((s) => s.totals(model.durationSec))
+    })
   }
 
   // ── SimContext ─────────────────────────────────────────────────────────────
