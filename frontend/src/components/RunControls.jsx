@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pause, Play, RefreshCw, Settings2, Square } from 'lucide-react'
+import { ChartLine, Pause, Play, RefreshCw, Settings2, Square } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { MAX_DURATION_SEC } from '@systemsim/engine'
 import { useSimulationStore } from '../store/simulationStore.js'
@@ -9,8 +9,16 @@ import { inputClass } from './fields/fieldStyles.js'
 
 /** ▶ Run, or ⏸ Pause / ▶ Resume + ■ Stop while a run is active, plus run settings. */
 function RunControls() {
-  const { status, start, pause, resume, stop } = useSimulationStore(
-    useShallow((s) => ({ status: s.status, start: s.start, pause: s.pause, resume: s.resume, stop: s.stop })),
+  const { status, drawerOpen, openDrawer, start, pause, resume, stop } = useSimulationStore(
+    useShallow((s) => ({
+      status: s.status,
+      drawerOpen: s.drawerOpen,
+      openDrawer: s.openDrawer,
+      start: s.start,
+      pause: s.pause,
+      resume: s.resume,
+      stop: s.stop,
+    })),
   )
   const active = status === 'running' || status === 'paused'
 
@@ -21,6 +29,11 @@ function RunControls() {
 
   return (
     <div className="ml-auto flex items-center gap-1.5">
+      {status !== 'idle' && !drawerOpen && (
+        <button type="button" onClick={openDrawer} className={secondaryButton} title="Show simulation results">
+          <ChartLine size={14} aria-hidden="true" /> Results
+        </button>
+      )}
       <RunSettings disabled={active} />
       {active ? (
         <>
@@ -52,12 +65,18 @@ function RunSettings({ disabled }) {
   useEffect(() => {
     if (!open) return undefined
     const onPointerDown = (e) => !ref.current?.contains(e.target) && setOpen(false)
-    const onKeyDown = (e) => e.key === 'Escape' && setOpen(false)
+    // Capture phase + preventDefault: Escape closes only this popover, not the
+    // results overlay it may sit in (that one ignores already-handled keys).
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      setOpen(false)
+    }
     document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keydown', onKeyDown, true)
     return () => {
       document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keydown', onKeyDown, true)
     }
   }, [open])
 

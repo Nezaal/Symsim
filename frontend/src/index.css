@@ -50,3 +50,25 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Full-page results: a short fade/slide in (skipped for reduced motion). */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.overlay-enter {
+  animation: overlay-in 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-enter {
+    animation: none;
+  }
+}

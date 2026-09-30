@@ -1,12 +1,14 @@
 import { useEffect } from 'react'
 import { useArchitectureStore } from '../store/architectureStore.js'
+import { useSimulationStore } from '../store/simulationStore.js'
 import { shortcutFor } from './shortcuts.js'
 
 /** Global editor shortcuts: undo, redo, duplicate. Delete is handled by React Flow. */
 export function useKeyboardShortcuts() {
   useEffect(() => {
     function onKeyDown(event) {
-      const command = shortcutFor(event)
+      // No editing the canvas while the full-page results cover it.
+      const command = shortcutFor(event, { enabled: !useSimulationStore.getState().drawerOpen })
       if (!command) return
       event.preventDefault() // e.g. stop Ctrl+D from opening the bookmark dialog
 

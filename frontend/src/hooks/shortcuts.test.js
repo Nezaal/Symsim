@@ -34,6 +34,10 @@ describe('shortcutFor', () => {
     expect(shortcutFor(press('z', { ctrlKey: true, altKey: true }))).toBeNull()
   })
 
+  it('is disabled while the canvas is hidden behind the results', () => {
+    expect(shortcutFor(press('z', { ctrlKey: true }), { enabled: false })).toBeNull()
+  })
+
   it('ignores keys without a modifier', () => {
     expect(shortcutFor(press('z'))).toBeNull()
   })

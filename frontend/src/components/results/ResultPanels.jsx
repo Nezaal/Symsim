@@ -23,11 +23,11 @@ export function KpiTiles({ totals, result }) {
       ]
 
   return (
-    <dl className="grid grid-cols-2 gap-2">
+    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {tiles.map(([label, value]) => (
-        <div key={label} className="rounded-md border border-line bg-canvas px-2.5 py-1.5">
-          <dt className="text-[11px] text-ink-muted">{label}</dt>
-          <dd className="text-sm font-semibold tabular-nums text-ink">{value}</dd>
+        <div key={label} className="rounded-lg border border-line bg-surface px-3 py-2">
+          <dt className="text-xs text-ink-muted">{label}</dt>
+          <dd className="text-lg font-semibold tabular-nums text-ink">{value}</dd>
         </div>
       ))}
     </dl>
@@ -41,12 +41,12 @@ export function Verdict({ result }) {
   const Icon = status === 'good' ? CheckCircle2 : AlertTriangle
 
   return (
-    <div className="space-y-1.5 rounded-md border border-line bg-canvas p-2.5">
+    <div className="space-y-1.5 rounded-lg border border-line bg-surface p-4">
       <p className="flex items-start gap-1.5 text-sm font-medium text-ink">
         <Icon size={16} color={STATUS[status]} className="mt-0.5 shrink-0" aria-hidden="true" />
         {result.summary}
       </p>
-      {bottleneck && <p className="text-xs leading-relaxed text-ink-muted">{bottleneck.explanation}</p>}
+      {bottleneck && <p className="text-sm leading-relaxed text-ink-muted">{bottleneck.explanation}</p>}
       {bottleneck?.alsoSaturated.length > 0 && (
         <p className="text-xs text-ink-muted">Also saturated: {bottleneck.alsoSaturated.join(', ')}.</p>
       )}

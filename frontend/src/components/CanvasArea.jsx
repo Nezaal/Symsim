@@ -3,6 +3,7 @@ import { Background, MarkerType, MiniMap, ReactFlow, useReactFlow } from '@xyflo
 import { useShallow } from 'zustand/react/shallow'
 import { connectionError, findComponentType } from '@systemsim/engine'
 import { useArchitectureStore } from '../store/architectureStore.js'
+import { useSimulationStore } from '../store/simulationStore.js'
 import { categoryColor } from '../lib/categories.js'
 import { COMPONENT_DRAG_MIME } from '../lib/dragAndDrop.js'
 import ComponentNode from './ComponentNode.jsx'
@@ -15,6 +16,8 @@ import CanvasControls from './CanvasControls.jsx'
 const nodeTypes = { component: ComponentNode }
 const defaultEdgeOptions = { type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed } }
 const DELETE_KEYS = ['Delete', 'Backspace']
+// React Flow is MIT-licensed; hiding the attribution link is permitted.
+const PRO_OPTIONS = { hideAttribution: true }
 
 const minimapColor = (node) =>
   categoryColor(findComponentType(node.data.componentType)?.category)
@@ -40,6 +43,8 @@ function CanvasArea() {
       })),
     )
   const { screenToFlowPosition } = useReactFlow()
+  // While results cover the page, keys must not edit the hidden canvas.
+  const resultsOpen = useSimulationStore((s) => s.drawerOpen)
 
   // Keyboard deletes arrive as several change events; snapshot once up front
   // so the whole delete is a single undo step.
@@ -81,7 +86,8 @@ function CanvasArea() {
         // so this one handler gives exactly one undo step per drag.
         onNodeDragStart={snapshot}
         onBeforeDelete={onBeforeDelete}
-        deleteKeyCode={DELETE_KEYS}
+        deleteKeyCode={resultsOpen ? null : DELETE_KEYS}
+        proOptions={PRO_OPTIONS}
         colorMode="dark"
       >
         <Background gap={16} />

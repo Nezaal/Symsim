@@ -1,7 +1,7 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import Toolbar from './components/Toolbar.jsx'
 import CanvasArea from './components/CanvasArea.jsx'
-import MetricsDrawer from './components/MetricsDrawer.jsx'
+import ResultsOverlay from './components/results/ResultsOverlay.jsx'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js'
 
 /**
@@ -14,10 +14,10 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js'
  *   │                            │ component│  │
  *   │                            │ is       │  │
  *   │                            │ selected)│  │
- *   │ [− 100% + ⛶][↶ ↷]         └──────────┘  │
- *   ├──────────────────────────────────────────┤
- *   │ Results drawer (slides up after Run)     │
+ *   │ [− 100% + ⛶ 🗺][↶ ↷]      └──────────┘  │
  *   └──────────────────────────────────────────┘
+ *
+ * Results open as a full-page overlay on top of all this (ResultsOverlay.jsx).
  *
  * Everything on the canvas floats (React Flow <Panel>s, see CanvasArea.jsx),
  * so the canvas itself is never squeezed by side columns.
@@ -34,9 +34,9 @@ function App() {
         <Toolbar />
         <main className="flex min-h-0 flex-1 flex-col">
           <CanvasArea />
-          <MetricsDrawer />
         </main>
       </div>
+      <ResultsOverlay />
     </ReactFlowProvider>
   )
 }
