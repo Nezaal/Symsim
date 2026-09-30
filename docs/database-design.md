@@ -114,4 +114,20 @@ above is met, and *Design decisions* is filled in.
 
 ## Design decisions
 
-*(Yours to fill in: for every **Decide** above, the choice and a sentence or two on why.)*
+Implemented in `supabase/migrations/20260930154945_initial_schema.sql`.
+Smoke test: `supabase/scripts/rls_smoke.sql`.
+
+| Decision | Choice | Why |
+|---|---|---|
+| Profile primary key | Same as the `auth.users` id, with `on delete cascade` | `auth.uid()` matches directly, exactly one profile per user, and it's removed with the account. |
+| Initial username | `user_` + 12 hex chars of the user id | Always valid and unique at sign-up; the user can rename it later. |
+| Public profile fields | All of them (username, display name, avatar) | Profiles contain nothing private; emails stay in `auth.users`. |
+| Graph storage | One `jsonb` document per version, capped at 1 MB | A version is always read and written as a whole, and never queried node by node. It matches the editor's `{ nodes, edges }` exactly, and immutability is trivial. |
+| Workload config | Validated columns (`duration_seconds`, `seed`) plus `workload jsonb` (64 KB) | The engine's request-mix format isn't designed yet. JSON avoids a migration every time it changes. |
+| Results per simulation | One (`simulation_id` is the primary key) | A run produces one outcome. Re-running creates a new simulation. |
+| Time-series data | Optional `timeseries jsonb`, capped at 2 MB (downsampled) | The results drawer needs charts after reload. The cap stops a runaway blob. |
+| Deleting a version | **Cascade** to its simulations, results and share links | Those rows are meaningless without the graph they refer to. A link to a deleted version must die, not dangle. |
+| Share tokens | 64 hex chars from two random UUIDs, looked up via `get_shared_version(token)` | About 244 random bits, so unguessable. The function returns only the one active version, so visitors can never list `share_links`. |
+| Version numbers | Assigned by a trigger that locks the parent project row | Clients can't choose or collide on numbers, even when saving at the same moment. |
+| Immutability | No update policy **and** a trigger that raises on update | RLS stops users; the trigger also stops admin/service-role code. |
+| Quotas | 50 projects per user, 200 versions per project (triggers) | Spec §11: stop one account from exhausting storage. |
