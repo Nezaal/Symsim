@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Components use these (e.g. `bg-surface`, `border-line`)
+ * instead of raw colors, so a light theme later is just a second set of values.
+ */
+@theme {
+  --color-canvas: #0b0d10;
+  --color-surface: #13161b;
+  --color-surface-2: #1a1e24;
+  --color-line: #262b33;
+  --color-ink: #e6e8eb;
+  --color-ink-muted: #8b929c;
+  --color-accent: #4f8cff;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

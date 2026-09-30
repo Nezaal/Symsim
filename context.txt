@@ -1,0 +1,281 @@
+# Project: SystemSim — Visual System Design & Simulation Platform
+
+## 1. Project Overview
+
+Build a modern, interactive web application that allows developers, students, and software engineers to visually design backend architectures and simulate their performance under artificial workloads.
+
+Users should be able to construct systems using components such as API gateways, load balancers, application servers, databases, caches, CDNs, message queues, and object storage.
+
+They can configure each component, generate synthetic traffic, and observe how their architecture behaves under increasing workloads.
+
+**The fundamental principle: This is a simulation platform, not a real load-testing service.**
+
+Do not generate actual HTTP traffic against external servers or require users to provision cloud infrastructure. All requests, resource consumption, processing delays, queues, and failures must be modeled computationally.
+
+The platform should feel like a combination of a visual architecture editor, a backend performance simulator, and an interactive engineering learning environment.
+
+## 2. Target Users
+
+* Students learning system design and distributed systems.
+* Developers preparing for system design interviews.
+* Engineers experimenting with architecture decisions.
+* Hackathon participants and software architects.
+
+## 3. Technology Stack
+
+Frontend:
+
+* React with JS and Vite.
+* Tailwind CSS.
+* shadcn/ui for polished interface components.
+* React Flow (@xyflow/react) for the architecture editor.
+* Zustand for client-side state management.
+* Recharts for performance visualizations.
+
+Backend:
+
+* Node.js with TypeScript and Express.
+* Supabase Auth for authentication.
+* Supabase PostgreSQL for persistent storage.
+* Supabase Row Level Security (RLS) for data isolation.
+* Supabase Storage only if future features require file uploads.
+
+Simulation:
+
+* A standalone TypeScript simulation engine.
+* Web Workers for computationally intensive simulations.
+* Discrete-event simulation for request processing, queues, resource contention, and failures.
+
+Use npm and maintain a clean, modular project structure.
+
+## 4. Core Feature: Visual Architecture Editor
+
+Create an interactive canvas where users can:
+
+* Drag components from a component library.
+* Connect components to define request flow.
+* Move, resize where appropriate, duplicate, and delete components.
+* Configure component properties through a contextual settings panel.
+* Zoom, pan, select, and rearrange the architecture.
+* Save and reopen architecture designs.
+* Undo and redo changes.
+* Start with prebuilt architecture templates.
+
+Initial component types:
+
+1. Client / Traffic Generator
+2. API Gateway
+3. Load Balancer
+4. Application Server
+5. Cache (Redis-like simulated cache)
+6. Relational Database
+7. NoSQL Database
+8. Message Queue
+9. Object Storage
+10. CDN
+
+Each component must have configurable properties relevant to its role, including capacity, latency, availability, resource limits, and scaling configuration.
+
+Do not implement real infrastructure integrations.
+
+## 5. Synthetic Traffic Engine
+
+Allow users to configure workloads using:
+
+* Requests per second.
+* Total simulation duration.
+* Number of virtual users.
+* Traffic ramp-up and ramp-down.
+* Traffic distribution across request types.
+* Constant, burst, and gradually increasing traffic patterns.
+* Randomized request arrival and processing times.
+
+Support synthetic request types such as:
+
+* Text messages.
+* API reads and writes.
+* Database queries.
+* Image uploads and downloads.
+* Video uploads and streaming.
+* File uploads and downloads.
+
+Each request type should have configurable payload size, CPU demand, memory consumption, network bandwidth requirements, storage I/O, and processing time.
+
+Use deterministic seeds where appropriate so users can reproduce experiments.
+
+Request payloads are metadata only. Never generate large files or transmit actual media.
+
+## 6. Simulation Engine
+
+Implement a discrete-event simulation that models:
+
+* Request routing through connected components.
+* Component processing capacity.
+* Concurrent request limits.
+* Queue formation and queue overflow.
+* Network bandwidth constraints.
+* CPU and memory saturation.
+* Database connection pools.
+* Cache hits and misses.
+* Load balancing strategies.
+* Replication and read/write workloads.
+* Component failures and recovery.
+* Horizontal scaling and autoscaling policies.
+
+Requests should experience modeled processing delays and resource contention.
+
+The simulation must identify bottlenecks and distinguish between successful, queued, rejected, timed-out, and failed requests.
+
+Do not simply multiply traffic by arbitrary resource coefficients and display fabricated metrics. Define consistent capacity units, queueing rules, resource accounting, and documented assumptions.
+
+## 7. Metrics Dashboard
+
+Provide a live dashboard displaying:
+
+* Throughput (requests per second).
+* Total requests processed.
+* Successful and failed requests.
+* Error rate.
+* Average latency.
+* p50, p95, and p99 latency.
+* CPU and memory utilization.
+* Network utilization.
+* Queue lengths and waiting times.
+* Database utilization.
+* Cache hit ratio.
+* Rejected and timed-out requests.
+
+Include time-series charts, resource utilization indicators, and a visual representation of overloaded components.
+
+Allow users to inspect individual components and understand why they became bottlenecks.
+
+Metrics must come from the simulation engine's actual calculations.
+
+## 8. Experimentation and Comparison
+
+Users should be able to:
+
+* Run, pause, resume, and stop simulations.
+* Change traffic intensity during supported experiments.
+* Save simulation results.
+* Compare two or more architecture configurations.
+* Compare performance before and after adding a cache, server, replica, or CDN.
+* Identify the component limiting throughput.
+* View an explanation of why a bottleneck occurred.
+
+Provide an experiment comparison view showing latency, throughput, error rate, and resource utilization.
+
+## 9. Supabase Backend
+
+Use Supabase as the managed backend for authentication and PostgreSQL persistence.
+
+Implement:
+
+* Email/password authentication.
+* Google OAuth where practical.
+* User profiles.
+* Saved architecture projects.
+* Project metadata and versioning.
+* Simulation configurations.
+* Saved simulation summaries and results.
+* Public and private project visibility.
+* Shareable, read-only architecture links.
+
+Suggested database entities:
+
+* profiles
+* projects
+* project_versions
+* simulations
+* simulation_results
+
+Use UUID primary keys, timestamps, foreign keys, appropriate indexes, and JSONB for flexible architecture graph data and simulation configurations.
+
+Implement Row Level Security policies so users can access only their own private projects and simulations. Public projects should be readable without exposing private user data.
+
+Use the Supabase publishable key in the frontend and keep service-role credentials exclusively on the server. Never expose secrets in client code.
+
+## 10. User Experience and Design
+
+Create a polished, professional engineering tool.
+
+Design direction:
+
+* Dark-first interface with an optional light theme.
+* Clean typography and restrained colors.
+* Subtle borders, spacing, and purposeful animations.
+* A spacious architecture canvas.
+* A collapsible component sidebar.
+* A contextual configuration panel.
+* A bottom or side panel for simulation metrics.
+* Responsive layouts for smaller screens.
+
+The primary workspace should prioritize the architecture canvas.
+
+Avoid excessive gradients, unnecessary animations, cluttered dashboards, and decorative elements that compete with the engineering workflow.
+
+Include useful empty states, onboarding, keyboard shortcuts, loading states, and clear error messages.
+
+## 11. Real Users and Production Readiness
+
+The application must be designed for public use.
+
+Implement:
+
+* Authentication and authorization.
+* Input validation and safe database queries.
+* Server-side authorization checks.
+* Rate limiting for API endpoints.
+* Simulation duration, event-count, and memory limits.
+* Cancellation of long-running simulations.
+* Per-user resource quotas.
+* Error monitoring and structured logging.
+* Database migrations and environment configuration.
+* Basic analytics for product usage.
+* Automated tests for simulation logic and critical workflows.
+
+Keep the simulation engine isolated from the API and UI so it can be optimized independently.
+
+Do not allow arbitrary user input to execute code or access the host system.
+
+Prevent users from exhausting server resources through extremely large simulations.
+
+## 12. Deployment
+
+Prepare the application for deployment using:
+
+* Vercel for the frontend.
+* A suitable Node.js hosting service for the Express backend, if needed.
+* Supabase for authentication and PostgreSQL.
+
+The simulation should initially run in the browser using Web Workers wherever practical, minimizing server costs.
+
+Use the backend for persistence, authentication-related operations, sharing, and future server-side simulation capabilities.
+
+Provide environment variable examples, database migrations, setup instructions, and deployment documentation.
+
+## 13. Development Approach
+
+Build incrementally:
+
+Phase 1: Architecture editor and component configuration.
+
+Phase 2: Core simulation engine and synthetic request types.
+
+Phase 3: Metrics dashboard and bottleneck visualization.
+
+Phase 4: Supabase authentication and project persistence.
+
+Phase 5: Experiment comparison and architecture templates.
+
+Phase 6: Sharing, onboarding, performance optimization, and production hardening.
+
+Start by establishing the architecture, data models, and simulation engine interfaces. Implement a working end-to-end MVP before adding advanced features.
+
+Prioritize correctness, usability, performance, and maintainability over feature quantity.
+
+## Final Product Goal
+
+Deliver a production-ready web platform where a user can design a backend architecture, generate artificial workloads, simulate increasing traffic, observe system bottlenecks, modify the architecture, and compare outcomes.
+
+The experience should make complex distributed-systems concepts tangible without requiring real servers, cloud infrastructure, or expensive load testing.
