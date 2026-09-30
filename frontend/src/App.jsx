@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import Toolbar from './components/Toolbar.jsx'
 import CanvasArea from './components/CanvasArea.jsx'
@@ -27,17 +26,15 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js'
  * toolbar's Templates menu) can use React Flow hooks such as useReactFlow().
  */
 function App() {
-  // Local for now; moves into a simulation store when the engine phase adds Run.
-  const [resultsOpen, setResultsOpen] = useState(false)
   useKeyboardShortcuts()
 
   return (
     <ReactFlowProvider>
       <div className="flex h-full flex-col">
-        <Toolbar onRun={() => setResultsOpen(true)} />
+        <Toolbar />
         <main className="flex min-h-0 flex-1 flex-col">
           <CanvasArea />
-          <MetricsDrawer open={resultsOpen} onClose={() => setResultsOpen(false)} />
+          <MetricsDrawer />
         </main>
       </div>
     </ReactFlowProvider>
