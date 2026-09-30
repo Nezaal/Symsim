@@ -1,8 +1,98 @@
-// Replaced by the React Flow canvas in milestone 1.
+import { useCallback } from 'react'
+import { Background, Controls, MarkerType, MiniMap, ReactFlow, useReactFlow } from '@xyflow/react'
+import { useShallow } from 'zustand/react/shallow'
+import { connectionError, findComponentType } from '@systemsim/engine'
+import { useArchitectureStore } from '../store/architectureStore.js'
+import { categoryColor } from '../lib/categories.js'
+import { COMPONENT_DRAG_MIME } from '../lib/dragAndDrop.js'
+import ComponentNode from './ComponentNode.jsx'
+
+// Defined outside the component so React Flow sees the same object every render.
+const nodeTypes = { component: ComponentNode }
+const defaultEdgeOptions = { type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed } }
+const DELETE_KEYS = ['Delete', 'Backspace']
+
+const minimapColor = (node) =>
+  categoryColor(findComponentType(node.data.componentType)?.category)
+
+// Reads the latest graph straight from the store, so this callback never goes stale.
+const isValidConnection = (connection) => {
+  const { nodes, edges } = useArchitectureStore.getState()
+  return connectionError(connection, nodes, edges) === null
+}
+
 function CanvasArea() {
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, snapshot, addNode } =
+    useArchitectureStore(
+      useShallow((s) => ({
+        nodes: s.nodes,
+        edges: s.edges,
+        onNodesChange: s.onNodesChange,
+        onEdgesChange: s.onEdgesChange,
+        onConnect: s.onConnect,
+        snapshot: s.snapshot,
+        addNode: s.addNode,
+      })),
+    )
+  const { screenToFlowPosition } = useReactFlow()
+
+  // Keyboard deletes arrive as several change events; snapshot once up front
+  // so the whole delete is a single undo step.
+  const onBeforeDelete = useCallback(async () => {
+    snapshot()
+    return true
+  }, [snapshot])
+
+  const onDragOver = useCallback((event) => {
+    if (!event.dataTransfer.types.includes(COMPONENT_DRAG_MIME)) return
+    event.preventDefault() // required, or the browser refuses the drop
+    event.dataTransfer.dropEffect = 'move'
+  }, [])
+
+  const onDrop = useCallback(
+    (event) => {
+      const type = event.dataTransfer.getData(COMPONENT_DRAG_MIME)
+      if (!findComponentType(type)) return
+      event.preventDefault()
+      // Mouse position is in screen pixels; the canvas may be panned and zoomed.
+      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      addNode(type, position)
+    },
+    [screenToFlowPosition, addNode],
+  )
+
   return (
-    <section className="flex min-h-0 flex-1 items-center justify-center bg-canvas">
-      <p className="text-sm text-ink-muted">Architecture canvas: drag components here</p>
+    <section className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        defaultEdgeOptions={defaultEdgeOptions}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        isValidConnection={isValidConnection}
+        onNodeDragStart={snapshot}
+        onBeforeDelete={onBeforeDelete}
+        deleteKeyCode={DELETE_KEYS}
+        colorMode="dark"
+      >
+        <Background gap={16} />
+        <Controls />
+        <MiniMap nodeColor={minimapColor} pannable zoomable />
+      </ReactFlow>
+
+      {nodes.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="max-w-xs text-center">
+            <p className="text-sm font-medium text-ink">Start with a Client</p>
+            <p className="mt-1 text-sm text-ink-muted">
+              Drag components from the left panel (or click them), then connect them
+              by dragging from a node&apos;s right dot to another node&apos;s left dot.
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

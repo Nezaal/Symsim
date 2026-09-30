@@ -20,6 +20,29 @@ body,
   height: 100%;
 }
 
+/*
+ * React Flow theming: its stylesheet exposes CSS variables, so we point them
+ * at our tokens instead of fighting its selectors.
+ */
+.react-flow {
+  --xy-background-color: var(--color-canvas);
+  --xy-edge-stroke: var(--color-ink-muted);
+  --xy-edge-stroke-selected: var(--color-accent);
+  --xy-handle-background-color: var(--color-ink-muted);
+  --xy-handle-border-color: var(--color-surface-2);
+  --xy-minimap-background-color: var(--color-surface);
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+}
+
+.react-flow__handle.connectingto.valid,
+.react-flow__handle:hover {
+  background: var(--color-accent);
+}
+
 body {
   margin: 0;
   background: var(--color-canvas);
