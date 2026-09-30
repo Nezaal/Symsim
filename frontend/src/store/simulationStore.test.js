@@ -87,6 +87,27 @@ describe('simulation store', () => {
     expect(store.getState()).toMatchObject({ status: 'error', errorMessage: 'too big' })
   })
 
+  it('ignores late worker messages after the user stopped the run', () => {
+    store.getState().start(graph.nodes, graph.edges)
+    const { runId } = store.getState()
+    store.getState().stop()
+    worker.reply({ type: 'done', runId, result: { summary: 'late' } })
+    worker.reply({ type: 'progress', runId, progress: { fraction: 1, windows: [{ t: 9 }], totals: {} } })
+    expect(store.getState()).toMatchObject({ status: 'stopped', result: null, windows: [] })
+  })
+
+  it('surfaces a crashed or unloadable worker instead of spinning forever', () => {
+    store.getState().start(graph.nodes, graph.edges)
+    worker.onerror?.({ message: 'boom' })
+    expect(store.getState().status).toBe('error')
+    expect(store.getState().errorMessage).toMatch(/simulation/i)
+  })
+
+  it('remembers which design revision a run was for', () => {
+    store.getState().start(graph.nodes, graph.edges, 42)
+    expect(store.getState().runRevision).toBe(42)
+  })
+
   it('validates run options before storing them', () => {
     store.getState().setOptions({ durationSec: 99999, seed: -5 })
     expect(store.getState().options).toEqual({ durationSec: 3600, seed: 0 })

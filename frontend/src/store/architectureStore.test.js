@@ -210,6 +210,39 @@ describe('loadTemplate', () => {
   })
 })
 
+describe('revision', () => {
+  it('increments on design changes but not on selection or dragging', () => {
+    const r0 = store().revision
+    const id = store().addNode('appServer', { x: 0, y: 0 })
+    const r1 = store().revision
+    expect(r1).toBeGreaterThan(r0)
+
+    store().onNodesChange([{ id, type: 'select', selected: false }])
+    store().snapshot()
+    store().onNodesChange([{ id, type: 'position', position: { x: 9, y: 9 }, dragging: false }])
+    expect(store().revision).toBe(r1)
+
+    store().updateNodeConfig(id, 'instances', 5)
+    expect(store().revision).toBeGreaterThan(r1)
+  })
+
+  it('increments on undo, redo, template loads and removals', () => {
+    const id = store().addNode('cache', { x: 0, y: 0 })
+    const steps = [
+      () => store().undo(),
+      () => store().redo(),
+      () => store().loadTemplate('basic-web-app'),
+      () => store().onNodesChange([{ id: store().nodes[0].id, type: 'remove' }]),
+    ]
+    for (const step of steps) {
+      const before = store().revision
+      step()
+      expect(store().revision).toBeGreaterThan(before)
+    }
+    expect(id).toBeDefined()
+  })
+})
+
 describe('undo / redo', () => {
   it('walks back and forth through history', () => {
     store().addNode('cache', { x: 0, y: 0 })

@@ -7,13 +7,19 @@
  *
  * The run advances in ~20 ms slices. Between slices the worker yields
  * (setTimeout 0), which is when pause/cancel messages get processed.
+ * Progress is posted at most ~5× per second: often enough to feel live,
+ * rare enough that the charts aren't re-rendered 50× per second.
  */
 import { LimitExceededError, startSimulation } from '@systemsim/engine'
 
 const SLICE_MS = 20
+const PROGRESS_INTERVAL_MS = 200
 
 /** @type {{ runId: number, run: import('@systemsim/engine').SimulationRun, paused: boolean } | null} */
 let current = null
+/** The single pending tick. There is never more than one, so a run can't be advanced twice. */
+let timer = null
+let lastProgressAt = 0
 
 const post = (message) => self.postMessage(message)
 
@@ -24,7 +30,10 @@ self.onmessage = (event) => {
       start(message)
       break
     case 'pause':
-      if (current?.runId === message.runId) current.paused = true
+      if (current?.runId === message.runId) {
+        current.paused = true
+        cancelTick()
+      }
       break
     case 'resume':
       if (current?.runId === message.runId && current.paused) {
@@ -33,7 +42,10 @@ self.onmessage = (event) => {
       }
       break
     case 'cancel':
-      if (current?.runId === message.runId) current = null
+      if (current?.runId === message.runId) {
+        current = null
+        cancelTick()
+      }
       break
     default:
       post({ type: 'error', runId: message.runId, message: `Unknown message type "${message.type}".` })
@@ -41,6 +53,10 @@ self.onmessage = (event) => {
 }
 
 function start({ runId, graph, options }) {
+  // A new run always replaces the old one, whatever happens next.
+  current = null
+  cancelTick()
+
   let started
   try {
     started = startSimulation(graph, options)
@@ -49,16 +65,25 @@ function start({ runId, graph, options }) {
     return
   }
   if (!started.ok) {
-    current = null
     post({ type: 'invalid', runId, errors: started.errors })
     return
   }
   current = { runId, run: started.run, paused: false }
+  lastProgressAt = 0
   scheduleTick()
 }
 
 function scheduleTick() {
-  setTimeout(tick, 0)
+  if (timer !== null) return
+  timer = setTimeout(() => {
+    timer = null
+    tick()
+  }, 0)
+}
+
+function cancelTick() {
+  if (timer !== null) clearTimeout(timer)
+  timer = null
 }
 
 function tick() {
@@ -66,7 +91,11 @@ function tick() {
   if (!job || job.paused) return
   try {
     const done = job.run.runSlice(SLICE_MS, () => performance.now())
-    post({ type: 'progress', runId: job.runId, progress: job.run.takeProgress() })
+    const now = performance.now()
+    if (done || now - lastProgressAt >= PROGRESS_INTERVAL_MS) {
+      post({ type: 'progress', runId: job.runId, progress: job.run.takeProgress() })
+      lastProgressAt = now
+    }
     if (done) {
       post({ type: 'done', runId: job.runId, result: job.run.result() })
       current = null

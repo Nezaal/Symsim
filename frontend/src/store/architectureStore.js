@@ -24,9 +24,24 @@ const INITIAL_STATE = {
   future: [],
   /** `${nodeId}:${key}` of the last settings edit, so typing coalesces into one undo step. */
   lastEditKey: null,
+  /**
+   * Bumped on every change to the design itself (not selection or moving
+   * nodes). Simulation results remember the revision they ran on, so the UI
+   * can tell when they describe an older design.
+   */
+  revision: 0,
 }
 
+/** Node/edge change types that alter the design (vs. select/position/dimensions). */
+const STRUCTURAL_CHANGES = new Set(['add', 'remove', 'replace'])
+const isStructural = (changes) => changes.some((c) => STRUCTURAL_CHANGES.has(c.type))
+
 const newId = (prefix) => `${prefix}-${randomId()}`
+
+/** State patch for a design edit: an undo step plus a new revision. */
+function recordEdit(state) {
+  return { ...record(state), revision: state.revision + 1 }
+}
 
 /** State patch that saves the current graph as an undo step. */
 function record(state) {
@@ -81,19 +96,21 @@ export const useArchitectureStore = create((set, get) => ({
     set((state) => ({
       nodes: applyNodeChanges(changes, state.nodes),
       lastEditKey: changes.some((c) => c.type === 'select') ? null : state.lastEditKey,
+      revision: isStructural(changes) ? state.revision + 1 : state.revision,
     })),
 
   onEdgesChange: (changes) =>
     set((state) => ({
       edges: applyEdgeChanges(changes, state.edges),
       lastEditKey: changes.some((c) => c.type === 'select') ? null : state.lastEditKey,
+      revision: isStructural(changes) ? state.revision + 1 : state.revision,
     })),
 
   onConnect: (connection) => {
     const { nodes, edges } = get()
     if (connectionError(connection, nodes, edges) !== null) return
     set((state) => ({
-      ...record(state),
+      ...recordEdit(state),
       edges: addEdge({ ...connection, id: newId('edge') }, state.edges),
     }))
   },
@@ -114,7 +131,7 @@ export const useArchitectureStore = create((set, get) => ({
       data: { componentType, label: def.label, config: defaultConfig(componentType) },
     }
     set((state) => ({
-      ...record(state),
+      ...recordEdit(state),
       nodes: [...state.nodes.map(deselect), node],
       edges: state.edges.map(deselect), // otherwise Delete would also remove a hidden selected edge
     }))
@@ -135,7 +152,7 @@ export const useArchitectureStore = create((set, get) => ({
   /** Replaces the whole graph with a starter template (undoable). */
   loadTemplate: (templateId) => {
     const graph = instantiateTemplate(getTemplate(templateId)) // throws before any state change
-    set((state) => ({ ...record(state), ...graph }))
+    set((state) => ({ ...recordEdit(state), ...graph }))
   },
 
   updateNodeConfig: (id, key, value) => {
@@ -150,6 +167,7 @@ export const useArchitectureStore = create((set, get) => ({
     const editKey = `${id}:${key}`
     set({
       ...(state.lastEditKey === editKey ? {} : record(state)),
+      revision: state.revision + 1,
       lastEditKey: editKey,
       nodes: replaceNode(state.nodes, id, (n) => ({
         ...n,
@@ -171,6 +189,7 @@ export const useArchitectureStore = create((set, get) => ({
     const editKey = `${id}:label`
     set({
       ...(state.lastEditKey === editKey ? {} : record(state)),
+      revision: state.revision + 1,
       lastEditKey: editKey,
       nodes: replaceNode(state.nodes, id, (n) => ({ ...n, data: { ...n.data, label: nextLabel } })),
     })
@@ -184,7 +203,7 @@ export const useArchitectureStore = create((set, get) => ({
     if (removedIds.size === 0 && !hasSelectedEdge) return
 
     set((state) => ({
-      ...record(state),
+      ...recordEdit(state),
       nodes: state.nodes.filter((n) => !removedIds.has(n.id)),
       edges: state.edges.filter(
         (e) => !e.selected && !removedIds.has(e.source) && !removedIds.has(e.target),
@@ -218,7 +237,7 @@ export const useArchitectureStore = create((set, get) => ({
           selected: false,
         }))
       return {
-        ...record(state),
+        ...recordEdit(state),
         nodes: [...state.nodes.map(deselect), ...copies],
         edges: [...state.edges.map(deselect), ...copiedEdges],
       }
@@ -231,14 +250,26 @@ export const useArchitectureStore = create((set, get) => ({
     set((state) => {
       const step = stepBack(state, { nodes: state.nodes, edges: state.edges })
       if (!step) return {}
-      return { ...step.present, past: step.past, future: step.future, lastEditKey: null }
+      return {
+        ...step.present,
+        past: step.past,
+        future: step.future,
+        lastEditKey: null,
+        revision: state.revision + 1,
+      }
     }),
 
   redo: () =>
     set((state) => {
       const step = stepForward(state, { nodes: state.nodes, edges: state.edges })
       if (!step) return {}
-      return { ...step.present, past: step.past, future: step.future, lastEditKey: null }
+      return {
+        ...step.present,
+        past: step.past,
+        future: step.future,
+        lastEditKey: null,
+        revision: state.revision + 1,
+      }
     }),
 
   /** Clears the graph and history (used by tests, later by "New project"). */

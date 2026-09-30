@@ -15,8 +15,8 @@ function RunControls() {
   const active = status === 'running' || status === 'paused'
 
   const run = () => {
-    const { nodes, edges } = useArchitectureStore.getState()
-    start(nodes, edges)
+    const { nodes, edges, revision } = useArchitectureStore.getState()
+    start(nodes, edges, revision)
   }
 
   return (

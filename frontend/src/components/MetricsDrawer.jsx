@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useSimulationStore } from '../store/simulationStore.js'
 import { useArchitectureStore } from '../store/architectureStore.js'
+import { useResultsStale } from '../hooks/useResultsStale.js'
 import { formatMs, formatRps } from '../lib/format.js'
 import { SERIES } from '../lib/vizTokens.js'
 import TimeSeriesChart from './results/TimeSeriesChart.jsx'
@@ -78,6 +79,7 @@ function MetricsDrawer() {
       </header>
 
       <div className="min-h-0 flex-1 overflow-auto p-3">
+        <StaleNotice status={status} />
         {status === 'invalid' && <ErrorList errors={errors} />}
         {status === 'error' && <p className="text-sm text-red-400">{errorMessage}</p>}
         {status !== 'invalid' && status !== 'error' && (
@@ -112,7 +114,10 @@ function ResultsBody({ windows, progress, result }) {
 
 /** Final totals when finished, otherwise the latest one-second sample. */
 function useUtilizationRows(windows, result) {
-  const nodes = useArchitectureStore((s) => s.nodes)
+  // Only labels and types matter here; useShallow keeps node drags from re-rendering the drawer.
+  const nodeInfo = useArchitectureStore(
+    useShallow((s) => Object.fromEntries(s.nodes.map((n) => [n.id, `${n.data.componentType}|${n.data.label}`]))),
+  )
   const latest = windows[windows.length - 1]
   return useMemo(() => {
     if (result) {
@@ -122,12 +127,27 @@ function useUtilizationRows(windows, result) {
         .sort((a, b) => b.utilization - a.utilization)
     }
     if (!latest) return []
-    const labels = new Map(nodes.map((n) => [n.id, n]))
+    const info = (id) => {
+      const value = nodeInfo[id]
+      const split = value ? value.indexOf('|') : -1
+      return split === -1 ? { type: '', label: id } : { type: value.slice(0, split), label: value.slice(split + 1) }
+    }
     return Object.entries(latest.stations)
-      .filter(([id]) => labels.get(id)?.data.componentType !== 'client')
-      .map(([id, sample]) => ({ id, label: labels.get(id)?.data.label ?? id, utilization: sample.utilization }))
+      .filter(([id]) => info(id).type !== 'client')
+      .map(([id, sample]) => ({ id, label: info(id).label, utilization: sample.utilization }))
       .sort((a, b) => b.utilization - a.utilization)
-  }, [result, latest, nodes])
+  }, [result, latest, nodeInfo])
+}
+
+/** Results describe the design as it was when the run started. */
+function StaleNotice({ status }) {
+  const stale = useResultsStale()
+  if (!stale || status === 'running' || status === 'paused') return null
+  return (
+    <p className="mb-2 rounded-md border border-line bg-canvas px-2.5 py-1.5 text-xs text-ink-muted">
+      You've changed the design since this run, so these results describe the earlier version. Press Run to update them.
+    </p>
+  )
 }
 
 function ErrorList({ errors }) {

@@ -5,6 +5,7 @@ import { categoryColor } from '../lib/categories.js'
 import { formatPct } from '../lib/format.js'
 import { STATUS, utilizationStatus } from '../lib/vizTokens.js'
 import { useSimulationStore } from '../store/simulationStore.js'
+import { useResultsStale } from '../hooks/useResultsStale.js'
 import ComponentIcon from './ComponentIcon.jsx'
 
 /**
@@ -73,8 +74,12 @@ function UtilizationBar({ value }) {
   )
 }
 
-/** Primitive selectors only, so a node re-renders only when its own values change. */
+/**
+ * Primitive selectors only, so a node re-renders only when its own values
+ * change. Overlays hide once the design has changed since the run.
+ */
 function useNodeSimulationState(id) {
+  const stale = useResultsStale()
   const utilization = useSimulationStore((s) => {
     if (s.status === 'idle' || s.status === 'invalid') return undefined
     if (s.result) return s.result.stations.find((st) => st.id === id)?.utilization
@@ -85,7 +90,7 @@ function useNodeSimulationState(id) {
     if (s.result?.bottleneck?.nodeId === id) return 'Bottleneck'
     return null
   })
-  return { utilization, flag }
+  return stale ? { utilization: undefined, flag: null } : { utilization, flag }
 }
 
 // memo: React Flow re-renders on every viewport change; skip unchanged nodes.

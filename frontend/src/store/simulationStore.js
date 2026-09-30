@@ -3,6 +3,8 @@ import { MAX_DURATION_SEC, randomSeed } from '@systemsim/engine'
 
 const DEFAULT_DURATION_SEC = 60
 const MAX_SEED = 0xffffffff
+const WORKER_FAILED = 'The simulation stopped unexpectedly (the background worker failed). Try running again.'
+const isActive = (status) => status === 'running' || status === 'paused'
 
 const clampInt = (value, min, max, fallback) => {
   const n = Math.round(Number(value))
@@ -41,6 +43,13 @@ export function createSimulationStore(workerFactory = createWorker) {
       if (!worker) {
         worker = workerFactory()
         worker.onmessage = (event) => get().handleMessage(event.data)
+        // A worker that fails to load or crashes would otherwise leave the
+        // UI on "Running…" forever. Drop it so the next run starts a fresh one.
+        worker.onerror = () => {
+          worker = null
+          if (isActive(get().status)) set({ status: 'error', errorMessage: WORKER_FAILED })
+        }
+        worker.onmessageerror = worker.onerror
       }
       worker.postMessage(message)
     }
@@ -58,12 +67,16 @@ export function createSimulationStore(workerFactory = createWorker) {
       errorNodeIds: [],
       errorMessage: null,
       drawerOpen: false,
+      /** Design revision (architecture store) the latest run was started for. */
+      runRevision: null,
 
-      start: (nodes, edges) => {
+      /** @param {number} [revision] design revision being simulated (for staleness checks) */
+      start: (nodes, edges, revision = null) => {
         const runId = get().runId + 1
         set({
           status: 'running',
           runId,
+          runRevision: revision,
           progress: null,
           windows: [],
           result: null,
@@ -108,7 +121,9 @@ export function createSimulationStore(workerFactory = createWorker) {
       closeDrawer: () => set({ drawerOpen: false }),
 
       handleMessage: (message) => {
-        if (!message || message.runId !== get().runId) return
+        // Only the current, still-active run may change state: messages from an
+        // older run, or ones that were in flight when the user pressed Stop, are dropped.
+        if (!message || message.runId !== get().runId || !isActive(get().status)) return
         switch (message.type) {
           case 'progress': {
             const { windows, ...progress } = message.progress
