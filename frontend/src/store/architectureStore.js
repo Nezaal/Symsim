@@ -9,6 +9,7 @@ import {
 } from '@systemsim/engine'
 import { randomId } from '../lib/ids.js'
 import { pushSnapshot, stepBack, stepForward } from './history.js'
+import { MAX_EDGES, MAX_NODES } from '../lib/graphSnapshot.js'
 
 export { HISTORY_LIMIT } from './history.js'
 
@@ -30,17 +31,26 @@ const INITIAL_STATE = {
    * can tell when they describe an older design.
    */
   revision: 0,
+  /**
+   * Like `revision`, but also bumped when a drag ends. Layout changes don't
+   * affect simulation results, but they are unsaved work (autosave, "Unsaved").
+   */
+  layoutRevision: 0,
 }
 
 /** Node/edge change types that alter the design (vs. select/position/dimensions). */
 const STRUCTURAL_CHANGES = new Set(['add', 'remove', 'replace'])
 const isStructural = (changes) => changes.some((c) => STRUCTURAL_CHANGES.has(c.type))
+const isDragEnd = (changes) => changes.some((c) => c.type === 'position' && c.dragging === false)
+
+/** State patch for a change to the design itself (bumps both counters). */
+const bumped = (state) => ({ revision: state.revision + 1, layoutRevision: state.layoutRevision + 1 })
 
 const newId = (prefix) => `${prefix}-${randomId()}`
 
 /** State patch for a design edit: an undo step plus a new revision. */
 function recordEdit(state) {
-  return { ...record(state), revision: state.revision + 1 }
+  return { ...record(state), ...bumped(state) }
 }
 
 /** State patch that saves the current graph as an undo step. */
@@ -97,6 +107,7 @@ export const useArchitectureStore = create((set, get) => ({
       nodes: applyNodeChanges(changes, state.nodes),
       lastEditKey: changes.some((c) => c.type === 'select') ? null : state.lastEditKey,
       revision: isStructural(changes) ? state.revision + 1 : state.revision,
+      layoutRevision: isStructural(changes) || isDragEnd(changes) ? state.layoutRevision + 1 : state.layoutRevision,
     })),
 
   onEdgesChange: (changes) =>
@@ -104,11 +115,12 @@ export const useArchitectureStore = create((set, get) => ({
       edges: applyEdgeChanges(changes, state.edges),
       lastEditKey: changes.some((c) => c.type === 'select') ? null : state.lastEditKey,
       revision: isStructural(changes) ? state.revision + 1 : state.revision,
+      layoutRevision: isStructural(changes) ? state.layoutRevision + 1 : state.layoutRevision,
     })),
 
   onConnect: (connection) => {
     const { nodes, edges } = get()
-    if (connectionError(connection, nodes, edges) !== null) return
+    if (edges.length >= MAX_EDGES || connectionError(connection, nodes, edges) !== null) return
     set((state) => ({
       ...recordEdit(state),
       edges: addEdge({ ...connection, id: newId('edge') }, state.edges),
@@ -120,9 +132,13 @@ export const useArchitectureStore = create((set, get) => ({
   /** Saves the current graph as an undo step. Call before a multi-event gesture such as a drag. */
   snapshot: () => set(record),
 
-  /** @returns {string} the new node's id */
+  /**
+   * @returns {string | null} the new node's id, or null at the size limit
+   * (designs must stay small enough to save and reopen)
+   */
   addNode: (componentType, position) => {
     const def = getComponentType(componentType) // throws before any state change
+    if (get().nodes.length >= MAX_NODES) return null
     const node = {
       id: newId(componentType),
       type: 'component',
@@ -167,7 +183,7 @@ export const useArchitectureStore = create((set, get) => ({
     const editKey = `${id}:${key}`
     set({
       ...(state.lastEditKey === editKey ? {} : record(state)),
-      revision: state.revision + 1,
+      ...bumped(state),
       lastEditKey: editKey,
       nodes: replaceNode(state.nodes, id, (n) => ({
         ...n,
@@ -189,7 +205,7 @@ export const useArchitectureStore = create((set, get) => ({
     const editKey = `${id}:label`
     set({
       ...(state.lastEditKey === editKey ? {} : record(state)),
-      revision: state.revision + 1,
+      ...bumped(state),
       lastEditKey: editKey,
       nodes: replaceNode(state.nodes, id, (n) => ({ ...n, data: { ...n.data, label: nextLabel } })),
     })
@@ -214,7 +230,7 @@ export const useArchitectureStore = create((set, get) => ({
   /** Copies selected nodes plus the edges between them, offset slightly, and selects the copies. */
   duplicateSelected: () => {
     const selected = get().nodes.filter((n) => n.selected)
-    if (selected.length === 0) return
+    if (selected.length === 0 || get().nodes.length + selected.length > MAX_NODES) return
 
     const idMap = new Map(selected.map((n) => [n.id, newId(n.data.componentType)]))
     // `data` can be shared between original and copy: nothing ever mutates it.
@@ -255,7 +271,7 @@ export const useArchitectureStore = create((set, get) => ({
         past: step.past,
         future: step.future,
         lastEditKey: null,
-        revision: state.revision + 1,
+        ...bumped(state),
       }
     }),
 
@@ -268,7 +284,7 @@ export const useArchitectureStore = create((set, get) => ({
         past: step.past,
         future: step.future,
         lastEditKey: null,
-        revision: state.revision + 1,
+        ...bumped(state),
       }
     }),
 
@@ -277,7 +293,7 @@ export const useArchitectureStore = create((set, get) => ({
    * starts fresh: undoing into a different project would be confusing.
    */
   replaceGraph: (nodes, edges) =>
-    set((state) => ({ nodes, edges, past: [], future: [], lastEditKey: null, revision: state.revision + 1 })),
+    set((state) => ({ nodes, edges, past: [], future: [], lastEditKey: null, ...bumped(state) })),
 
   /** Clears the graph and history (used by tests, later by "New project"). */
   reset: () => set(INITIAL_STATE),

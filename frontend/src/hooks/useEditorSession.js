@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useArchitectureStore } from '../store/architectureStore.js'
 import { useAuthStore } from '../store/authStore.js'
@@ -24,6 +24,10 @@ let openingProjectId = null
 export function useEditorSession(routeProjectId) {
   const navigate = useNavigate()
   const authStatus = useAuthStore((s) => s.status)
+  const routeRef = useRef(routeProjectId)
+  useEffect(() => {
+    routeRef.current = routeProjectId
+  }, [routeProjectId])
   const projectId = useProjectStore((s) => s.project?.id ?? null)
 
   // 1. Restore the browser draft on a plain /app visit.
@@ -58,7 +62,11 @@ export function useEditorSession(routeProjectId) {
       .openProject(routeProjectId, { draft: loadDraft() })
       .then((ok) => {
         openingProjectId = null
-        if (!ok) navigate('/app', { replace: true })
+        if (ok) return
+        // Private project while signed out (or an expired session): offer sign-in.
+        if (useAuthStore.getState().status !== 'signedIn') useAuthStore.getState().openSignIn()
+        // Only leave if the user is still on this project's URL.
+        if (routeRef.current === routeProjectId) navigate('/app', { replace: true })
       })
   }, [routeProjectId, authStatus, navigate])
 
@@ -76,20 +84,30 @@ export function useEditorSession(routeProjectId) {
     navigate('/app', { replace: true })
   }, [authStatus, navigate])
 
-  // 5. Autosave the working design to this browser.
+  // 5. Autosave the working design to this browser (moving nodes counts too).
   useEffect(() => {
     let timer = null
+    const writeDraft = () => {
+      timer = null
+      const { nodes, edges } = useArchitectureStore.getState()
+      const { project, version } = useProjectStore.getState()
+      saveDraft({ projectId: project?.id ?? null, versionId: version?.id ?? null, nodes, edges })
+    }
+    // Leaving the page with an autosave still pending: write it now.
+    const flush = () => {
+      if (timer === null) return
+      clearTimeout(timer)
+      writeDraft()
+    }
     const unsubscribe = useArchitectureStore.subscribe((state, previous) => {
-      if (state.revision === previous.revision) return
+      if (state.layoutRevision === previous.layoutRevision) return
       clearTimeout(timer)
-      timer = setTimeout(() => {
-        const { nodes, edges } = useArchitectureStore.getState()
-        const { project, version } = useProjectStore.getState()
-        saveDraft({ projectId: project?.id ?? null, versionId: version?.id ?? null, nodes, edges })
-      }, AUTOSAVE_DELAY_MS)
+      timer = setTimeout(writeDraft, AUTOSAVE_DELAY_MS)
     })
+    window.addEventListener('pagehide', flush)
     return () => {
-      clearTimeout(timer)
+      window.removeEventListener('pagehide', flush)
+      flush()
       unsubscribe()
     }
   }, [])

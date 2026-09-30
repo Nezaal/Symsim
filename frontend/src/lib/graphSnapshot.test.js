@@ -58,6 +58,23 @@ describe('deserializeGraph', () => {
     expect(edges.map((e) => e.id)).toEqual(['ok'])
   })
 
+  it('drops duplicate node and edge ids (keeps the first)', () => {
+    const { nodes, edges } = deserializeGraph({
+      v: 1,
+      nodes: [
+        { id: 'c', position: { x: 0, y: 0 }, data: { componentType: 'client' } },
+        { id: 'c', position: { x: 9, y: 9 }, data: { componentType: 'cache' } },
+        { id: 'a', position: { x: 0, y: 0 }, data: { componentType: 'appServer' } },
+      ],
+      edges: [
+        { id: 'e', source: 'c', target: 'a' },
+        { id: 'e', source: 'c', target: 'a' },
+      ],
+    })
+    expect(nodes.map((n) => n.data.componentType)).toEqual(['client', 'appServer'])
+    expect(edges).toHaveLength(1)
+  })
+
   it('rejects things that are not a design at all', () => {
     expect(() => deserializeGraph(null)).toThrow(GraphSnapshotError)
     expect(() => deserializeGraph({ nodes: 'nope', edges: [] })).toThrow(GraphSnapshotError)

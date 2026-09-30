@@ -130,6 +130,29 @@ export function createSimulationStore(workerFactory = createWorker) {
 
       newSeed: () => set((state) => ({ options: { ...state.options, seed: randomSeed() } })),
 
+      /** Forgets the current run entirely (stopping it if active). Used on sign-out. */
+      clearRun: () => {
+        const { status, runId } = get()
+        if (isActive(status)) send({ type: 'cancel', runId })
+        set({
+          status: 'idle',
+          runId: runId + 1, // late messages from the old run are ignored
+          runRevision: null,
+          runOptions: null,
+          runWorkload: null,
+          startedAt: null,
+          finishedAt: null,
+          runSave: { status: 'idle' },
+          progress: null,
+          windows: [],
+          result: null,
+          errors: [],
+          errorNodeIds: [],
+          errorMessage: null,
+          drawerOpen: false,
+        })
+      },
+
       /** Updates the save state, unless a newer run has started meanwhile. */
       setRunSave: (runId, runSave) => {
         if (runId === get().runId) set({ runSave })

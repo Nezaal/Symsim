@@ -56,6 +56,15 @@ describe('auth store', () => {
     await vi.waitFor(() => expect(store.getState()).toMatchObject({ status: 'signedOut', user: null, profile: null }))
   })
 
+  it('falls back to signed out when the session cannot be restored', async () => {
+    const client = fakeClient()
+    client.auth.getSession.mockRejectedValueOnce(new Error('offline'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = createAuthStore(client, providers)
+    await store.getState().init()
+    expect(store.getState().status).toBe('signedOut')
+  })
+
   it('initializes only once', async () => {
     const client = fakeClient()
     const store = createAuthStore(client, providers)

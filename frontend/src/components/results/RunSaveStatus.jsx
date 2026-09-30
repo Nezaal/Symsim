@@ -31,7 +31,18 @@ function RunSaveStatus() {
     )
   }
   if (runSave.status === 'error') {
-    return <Line icon={<CloudOff size={14} aria-hidden="true" />}>{runSave.message}</Line>
+    return (
+      <Line icon={<CloudOff size={14} aria-hidden="true" />}>
+        {runSave.message}{' '}
+        <button
+          type="button"
+          onClick={() => sim.setRunSave(sim.runId, { status: 'idle' })}
+          className="text-accent underline"
+        >
+          Retry
+        </button>
+      </Line>
+    )
   }
 
   const decision = runSaveState({ sim, auth, project, revision })

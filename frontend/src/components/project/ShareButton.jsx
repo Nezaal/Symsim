@@ -1,19 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, Share2 } from 'lucide-react'
+import { Check, Copy, Link2Off, Share2 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useHasUnsavedChanges, useProjectStore } from '../../store/projectStore.js'
 import { ghostButton } from '../../lib/buttonStyles.js'
 import { inputClass } from '../fields/fieldStyles.js'
 
 /**
- * Creates a read-only public link to the latest saved version and shows it
- * with a Copy button. Links are frozen to that version: later edits don't
+ * Creates (or reuses) a read-only public link to the latest saved version,
+ * with Copy and "Turn off". Links are frozen to that version: later edits don't
  * change what viewers see.
  */
 function ShareButton() {
-  const { version, busy, shareUrl, createShareLink } = useProjectStore(
-    useShallow((s) => ({ version: s.version, busy: s.busy, shareUrl: s.shareUrl, createShareLink: s.createShareLink })),
+  const { version, busy, share, createShareLink, revokeShareLink } = useProjectStore(
+    useShallow((s) => ({
+      version: s.version,
+      busy: s.busy,
+      share: s.share,
+      createShareLink: s.createShareLink,
+      revokeShareLink: s.revokeShareLink,
+    })),
   )
+  const shareUrl = share?.url ?? null
   const unsaved = useHasUnsavedChanges()
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -33,7 +40,7 @@ function ShareButton() {
 
   if (!version) return null
 
-  const share = async () => {
+  const openShare = async () => {
     setCopied(false)
     setOpen(true)
     await createShareLink(window.location.origin)
@@ -50,7 +57,7 @@ function ShareButton() {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={share} disabled={busy} className={`${ghostButton} flex items-center gap-1.5`}>
+      <button type="button" onClick={openShare} disabled={busy} className={`${ghostButton} flex items-center gap-1.5`}>
         <Share2 size={14} aria-hidden="true" /> Share
       </button>
       {open && (
@@ -71,6 +78,16 @@ function ShareButton() {
             <p className="text-xs text-ink-muted">Creating link…</p>
           )}
           <p className="text-xs text-ink-muted">Anyone with the link can view this version without signing in.</p>
+          {shareUrl && (
+            <button
+              type="button"
+              onClick={revokeShareLink}
+              disabled={busy}
+              className="flex items-center gap-1.5 text-xs text-red-400 hover:underline disabled:opacity-50"
+            >
+              <Link2Off size={12} aria-hidden="true" /> Turn off this link
+            </button>
+          )}
         </div>
       )}
     </div>

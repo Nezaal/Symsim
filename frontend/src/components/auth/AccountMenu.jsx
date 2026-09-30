@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { LogOut } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAuthStore } from '../../store/authStore.js'
+import { signOutAndClear } from '../../lib/signOut.js'
 
 /** "Sign in" for guests; an avatar menu with sign-out once signed in. */
 function AccountMenu() {
-  const { status, user, profile, openSignIn, signOut } = useAuthStore(
-    useShallow((s) => ({ status: s.status, user: s.user, profile: s.profile, openSignIn: s.openSignIn, signOut: s.signOut })),
+  const { status, user, profile, openSignIn } = useAuthStore(
+    useShallow((s) => ({ status: s.status, user: s.user, profile: s.profile, openSignIn: s.openSignIn })),
   )
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -57,7 +58,7 @@ function AccountMenu() {
             type="button"
             onClick={() => {
               setOpen(false)
-              signOut()
+              signOutAndClear()
             }}
             className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-ink hover:bg-surface-2"
           >

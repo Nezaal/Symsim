@@ -58,9 +58,15 @@ export function createAuthStore(client = supabase, loadProviders = fetchAuthProv
             // Don't await inside the callback: supabase-js holds a lock while it runs.
             setTimeout(() => applySession(session), 0)
           })
-          const [{ data }, providers] = await Promise.all([client.auth.getSession(), loadProviders()])
-          set({ providers })
-          await applySession(data.session)
+          try {
+            const [{ data }, providers] = await Promise.all([client.auth.getSession(), loadProviders()])
+            set({ providers })
+            await applySession(data.session)
+          } catch (error) {
+            // Backend unreachable: carry on as a guest rather than spinning forever.
+            console.error('Could not restore the session', error)
+            set({ status: 'signedOut', user: null, profile: null })
+          }
         })()
         return initPromise
       },

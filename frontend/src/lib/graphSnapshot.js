@@ -50,12 +50,14 @@ export function deserializeGraph(raw) {
   }
 
   const nodes = []
+  const nodeIds = new Set()
   for (const item of raw.nodes) {
     if (!isObject(item) || !isId(item.id) || !isObject(item.data)) {
       throw new GraphSnapshotError('This design is damaged and cannot be opened.')
     }
     const def = findComponentType(item.data.componentType)
-    if (!def) continue
+    if (!def || nodeIds.has(item.id)) continue // unknown type, or a duplicate id
+    nodeIds.add(item.id)
     const storedConfig = isObject(item.data.config) ? item.data.config : {}
     const config = Object.fromEntries(
       def.fields.map((f) => [f.key, clampFieldValue(f, storedConfig[f.key] ?? f.default)]),
@@ -70,10 +72,17 @@ export function deserializeGraph(raw) {
   }
 
   const edges = []
+  const edgeIds = new Set()
   for (const item of raw.edges) {
     if (!isObject(item) || !isId(item.source) || !isId(item.target)) continue
-    const edge = { id: isId(item.id) ? item.id : `edge-${edges.length}`, source: item.source, target: item.target }
-    if (connectionError(edge, nodes, edges) === null) edges.push(edge)
+    const base = isId(item.id) ? item.id : 'edge'
+    let id = base
+    for (let n = 1; edgeIds.has(id); n += 1) id = `${base}-${n}`
+    const edge = { id, source: item.source, target: item.target }
+    if (connectionError(edge, nodes, edges) === null) {
+      edgeIds.add(id)
+      edges.push(edge)
+    }
   }
 
   return { nodes, edges }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { HISTORY_LIMIT, useArchitectureStore } from './architectureStore.js'
+import { MAX_NODES } from '../lib/graphSnapshot.js'
 
 const store = () => useArchitectureStore.getState()
 const select = (ids) =>
@@ -253,6 +254,38 @@ describe('revision', () => {
       expect(store().revision).toBeGreaterThan(before)
     }
     expect(id).toBeDefined()
+  })
+})
+
+describe('layoutRevision', () => {
+  it('bumps when a drag ends, without touching the design revision', () => {
+    const id = store().addNode('cache', { x: 0, y: 0 })
+    const { revision, layoutRevision } = store()
+    store().onNodesChange([{ id, type: 'position', position: { x: 5, y: 5 }, dragging: true }])
+    expect(store().layoutRevision).toBe(layoutRevision) // mid-drag: not yet
+    store().onNodesChange([{ id, type: 'position', position: { x: 9, y: 9 }, dragging: false }])
+    expect(store().layoutRevision).toBe(layoutRevision + 1)
+    expect(store().revision).toBe(revision)
+  })
+
+  it('also bumps on every design change', () => {
+    const before = store().layoutRevision
+    store().addNode('cache', { x: 0, y: 0 })
+    expect(store().layoutRevision).toBe(before + 1)
+  })
+})
+
+describe('size limits', () => {
+  it('refuses to add components beyond the saveable maximum', () => {
+    const nodes = Array.from({ length: MAX_NODES }, (_, i) => ({
+      id: `n${i}`, type: 'component', position: { x: 0, y: 0 }, data: { componentType: 'cache', label: 'Cache', config: {} },
+    }))
+    store().replaceGraph(nodes, [])
+    expect(store().addNode('cache', { x: 0, y: 0 })).toBeNull()
+    expect(store().nodes).toHaveLength(MAX_NODES)
+    store().onNodesChange([{ id: 'n0', type: 'select', selected: true }])
+    store().duplicateSelected()
+    expect(store().nodes).toHaveLength(MAX_NODES)
   })
 })
 

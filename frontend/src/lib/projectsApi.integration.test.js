@@ -111,6 +111,20 @@ describe('projects API against local Supabase', () => {
     expect(shared.project_name).toBe('Shared')
     expect(deserializeGraph(shared.graph).edges).toHaveLength(4)
     expect(await anonApi.getSharedVersion('not-a-real-token')).toBeNull()
+
+    expect((await adaApi.getActiveShareLink(version.id)).id).toBe(link.id)
+    await adaApi.revokeShareLink(link.id)
+    expect(await anonApi.getSharedVersion(link.token)).toBeNull()
+    expect(await adaApi.getActiveShareLink(version.id)).toBeNull()
+  })
+
+  it("does not let another user revoke or list your share links", async () => {
+    const project = await adaApi.createProject('Link owner')
+    const version = await adaApi.saveVersion(project.id, templateSnapshot())
+    const link = await adaApi.createShareLink(version.id)
+    await bobApi.revokeShareLink(link.id) // RLS: matches no rows, so nothing happens
+    expect(await anonApi.getSharedVersion(link.token)).not.toBeNull()
+    expect(await bobApi.getActiveShareLink(version.id)).toBeNull()
   })
 
   it('does not let another user write into your project', async () => {

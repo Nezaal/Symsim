@@ -7,6 +7,7 @@ import { projectsApi } from '../lib/projectsApi.js'
 import { deserializeGraph } from '../lib/graphSnapshot.js'
 import { useArchitectureStore } from '../store/architectureStore.js'
 import { useProjectStore } from '../store/projectStore.js'
+import { saveDraft } from '../lib/draftStorage.js'
 
 const nodeTypes = { component: ComponentNode }
 const defaultEdgeOptions = { type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed } }
@@ -38,8 +39,12 @@ function SharedPage() {
 
   /** Copies the design into the editor as a new, unsaved design (the original is untouched). */
   const openCopy = () => {
+    const hasWork = useArchitectureStore.getState().nodes.length > 0
+    if (hasWork && !window.confirm('Replace the design currently open in your editor with this copy?')) return
     useProjectStore.getState().reset()
     useArchitectureStore.getState().replaceGraph(state.graph.nodes, state.graph.edges)
+    // Write the draft now, so a refresh before the first edit keeps the copy.
+    saveDraft({ nodes: state.graph.nodes, edges: state.graph.edges })
     navigate('/app')
   }
 

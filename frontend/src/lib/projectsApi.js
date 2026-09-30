@@ -152,6 +152,28 @@ export function createProjectsApi(client = supabase) {
       return simulation
     },
 
+    /** The newest link for a version that hasn't been turned off, or null. */
+    async getActiveShareLink(versionId) {
+      const result = await requireClient()
+        .from('share_links')
+        .select('id, token, expires_at')
+        .eq('version_id', versionId)
+        .is('revoked_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const link = unwrap(result, "Couldn't load share links.")
+      return link && (!link.expires_at || new Date(link.expires_at) > new Date()) ? link : null
+    },
+
+    async revokeShareLink(linkId) {
+      const result = await requireClient()
+        .from('share_links')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('id', linkId)
+      unwrap(result, "Couldn't turn off the share link.")
+    },
+
     async createShareLink(versionId) {
       const result = await requireClient()
         .from('share_links')

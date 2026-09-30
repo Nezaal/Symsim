@@ -54,8 +54,9 @@ function ProjectsMenu() {
   const navigate = useNavigate()
   const userId = useAuthStore((s) => s.user?.id)
   const unsaved = useHasUnsavedChanges()
-  const { projects, projectsStatus, currentId, loadMyProjects, newDesign } = useProjectStore(
+  const { busy, projects, projectsStatus, currentId, loadMyProjects, newDesign } = useProjectStore(
     useShallow((s) => ({
+      busy: s.busy,
       projects: s.projects,
       projectsStatus: s.projectsStatus,
       currentId: s.project?.id,
@@ -88,6 +89,7 @@ function ProjectsMenu() {
         <div className="absolute left-0 top-full z-30 mt-1 w-72 rounded-lg border border-line bg-surface p-1 shadow-lg">
           <button
             type="button"
+            disabled={busy}
             onClick={() => {
               if (!leaveCurrent()) return
               setOpen(false)
@@ -108,7 +110,7 @@ function ProjectsMenu() {
               <li key={p.id}>
                 <button
                   type="button"
-                  disabled={p.id === currentId}
+                  disabled={busy || p.id === currentId}
                   onClick={() => {
                     if (!leaveCurrent()) return
                     setOpen(false)

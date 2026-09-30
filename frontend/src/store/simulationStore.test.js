@@ -130,6 +130,14 @@ describe('simulation store', () => {
     expect(store.getState().runSave).toEqual({ status: 'saved', versionNumber: 2 })
   })
 
+  it('clears the run completely (e.g. on sign-out), stopping an active one', () => {
+    store.getState().start(graph.nodes, graph.edges)
+    const { runId } = store.getState()
+    store.getState().clearRun()
+    expect(worker.sent.at(-1)).toEqual({ type: 'cancel', runId })
+    expect(store.getState()).toMatchObject({ status: 'idle', result: null, windows: [], drawerOpen: false, runRevision: null })
+  })
+
   it('validates run options before storing them', () => {
     store.getState().setOptions({ durationSec: 99999, seed: -5 })
     expect(store.getState().options).toEqual({ durationSec: 3600, seed: 0 })
