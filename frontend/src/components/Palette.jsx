@@ -49,7 +49,7 @@ function Palette({ open }) {
   if (!open) return null
 
   return (
-    <aside className="w-56 shrink-0 overflow-y-auto border-r border-line bg-surface p-3">
+    <aside aria-label="Components" className="w-56 shrink-0 overflow-y-auto border-r border-line bg-surface p-3">
       <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-muted">
         Components
       </h2>

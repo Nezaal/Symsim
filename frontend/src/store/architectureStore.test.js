@@ -25,6 +25,16 @@ describe('addNode', () => {
     expect(nodes.find((n) => n.id === second).selected).toBe(true)
   })
 
+  it('deselects edges too, so Delete only removes what the panel shows', () => {
+    const a = store().addNode('client', { x: 0, y: 0 })
+    const b = store().addNode('appServer', { x: 0, y: 0 })
+    store().onConnect({ source: a, target: b })
+    const edgeId = store().edges[0].id
+    store().onEdgesChange([{ id: edgeId, type: 'select', selected: true }])
+    store().addNode('cache', { x: 0, y: 0 })
+    expect(store().edges[0].selected).toBe(false)
+  })
+
   it('rejects unknown component types without changing state', () => {
     expect(() => store().addNode('mainframe', { x: 0, y: 0 })).toThrow()
     expect(store().nodes).toHaveLength(0)
@@ -61,6 +71,15 @@ describe('updateNodeConfig', () => {
     store().updateNodeConfig(id, 'instances', 5)
     store().undo()
     expect(store().nodes[0].data.config.instances).toBe(2)
+  })
+
+  it('starts a new undo step after endEdit (e.g. the field lost focus)', () => {
+    const id = store().addNode('appServer', { x: 0, y: 0 })
+    store().updateNodeConfig(id, 'instances', 3)
+    store().endEdit()
+    store().updateNodeConfig(id, 'instances', 4)
+    store().undo()
+    expect(store().nodes[0].data.config.instances).toBe(3)
   })
 })
 
@@ -127,6 +146,50 @@ describe('duplicateSelected', () => {
     store().duplicateSelected()
     expect(store().nodes).toHaveLength(1)
     expect(store().past).toHaveLength(pastLength)
+  })
+})
+
+describe('loadTemplate', () => {
+  it('builds nodes and edges from the template', () => {
+    store().loadTemplate('basic-web-app')
+    const { nodes, edges } = store()
+    expect(nodes).toHaveLength(5)
+    expect(edges).toHaveLength(4)
+    expect(nodes.every((n) => n.type === 'component' && !n.selected)).toBe(true)
+    const ids = new Set(nodes.map((n) => n.id))
+    expect(edges.every((e) => ids.has(e.source) && ids.has(e.target))).toBe(true)
+  })
+
+  it('merges config overrides into the defaults and applies labels', () => {
+    store().loadTemplate('basic-web-app')
+    const app = store().nodes.find((n) => n.data.componentType === 'appServer')
+    expect(app.data.label).toBe('App servers')
+    expect(app.data.config).toMatchObject({ instances: 3, cpuCores: 2, serviceTimeMs: 20 })
+    const gateway = store().nodes.find((n) => n.data.componentType === 'apiGateway')
+    expect(gateway.data.label).toBe('API Gateway')
+  })
+
+  it('uses fresh ids every time it is loaded', () => {
+    store().loadTemplate('basic-web-app')
+    const firstIds = store().nodes.map((n) => n.id)
+    store().loadTemplate('basic-web-app')
+    expect(store().nodes.map((n) => n.id)).not.toEqual(firstIds)
+  })
+
+  it('replaces the current graph as one undoable step', () => {
+    const id = store().addNode('cache', { x: 0, y: 0 })
+    store().loadTemplate('basic-web-app')
+    expect(store().nodes.some((n) => n.id === id)).toBe(false)
+    store().undo()
+    expect(store().nodes.map((n) => n.id)).toEqual([id])
+    expect(store().edges).toHaveLength(0)
+  })
+
+  it('throws for an unknown template without changing state', () => {
+    store().addNode('cache', { x: 0, y: 0 })
+    const before = store().nodes
+    expect(() => store().loadTemplate('nope')).toThrow(/Unknown template/)
+    expect(store().nodes).toBe(before)
   })
 })
 

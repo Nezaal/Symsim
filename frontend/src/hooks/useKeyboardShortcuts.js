@@ -1,0 +1,24 @@
+import { useEffect } from 'react'
+import { useArchitectureStore } from '../store/architectureStore.js'
+import { shortcutFor } from './shortcuts.js'
+
+/** Global editor shortcuts: undo, redo, duplicate. Delete is handled by React Flow. */
+export function useKeyboardShortcuts() {
+  useEffect(() => {
+    function onKeyDown(event) {
+      const command = shortcutFor(event)
+      if (!command) return
+      event.preventDefault() // e.g. stop Ctrl+D from opening the bookmark dialog
+
+      // getState() instead of a hook subscription: this listener is created once
+      // and must always call the latest actions.
+      const { undo, redo, duplicateSelected } = useArchitectureStore.getState()
+      if (command === 'undo') undo()
+      else if (command === 'redo') redo()
+      else if (command === 'duplicate') duplicateSelected()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+}

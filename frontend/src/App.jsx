@@ -5,6 +5,7 @@ import Palette from './components/Palette.jsx'
 import CanvasArea from './components/CanvasArea.jsx'
 import ConfigPanel from './components/ConfigPanel.jsx'
 import MetricsDrawer from './components/MetricsDrawer.jsx'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js'
 
 /**
  * App shell: a grid of five regions.
@@ -24,6 +25,7 @@ import MetricsDrawer from './components/MetricsDrawer.jsx'
 function App() {
   const [paletteOpen, setPaletteOpen] = useState(true)
   const [metricsOpen, setMetricsOpen] = useState(true)
+  useKeyboardShortcuts()
 
   return (
     <ReactFlowProvider>

@@ -5,7 +5,9 @@ import {
   connectionError,
   defaultConfig,
   getComponentType,
+  getTemplate,
 } from '@systemsim/engine'
+import { randomId } from '../lib/ids.js'
 import { pushSnapshot, stepBack, stepForward } from './history.js'
 
 export { HISTORY_LIMIT } from './history.js'
@@ -24,7 +26,7 @@ const INITIAL_STATE = {
   lastEditKey: null,
 }
 
-const newId = (prefix) => `${prefix}-${crypto.randomUUID()}`
+const newId = (prefix) => `${prefix}-${randomId()}`
 
 /** State patch that saves the current graph as an undo step. */
 function record(state) {
@@ -39,6 +41,27 @@ const deselect = (item) => (item.selected ? { ...item, selected: false } : item)
 
 function replaceNode(nodes, id, update) {
   return nodes.map((n) => (n.id === id ? update(n) : n))
+}
+
+/** Turns engine template data into React Flow nodes/edges with fresh ids. */
+function instantiateTemplate(template) {
+  const idByKey = new Map(template.nodes.map((n) => [n.key, newId(n.componentType)]))
+  const nodes = template.nodes.map((n) => ({
+    id: idByKey.get(n.key),
+    type: 'component',
+    position: { ...n.position },
+    data: {
+      componentType: n.componentType,
+      label: n.label ?? getComponentType(n.componentType).label,
+      config: { ...defaultConfig(n.componentType), ...n.config },
+    },
+  }))
+  const edges = template.edges.map(([sourceKey, targetKey]) => ({
+    id: newId('edge'),
+    source: idByKey.get(sourceKey),
+    target: idByKey.get(targetKey),
+  }))
+  return { nodes, edges }
 }
 
 /**
@@ -60,7 +83,11 @@ export const useArchitectureStore = create((set, get) => ({
       lastEditKey: changes.some((c) => c.type === 'select') ? null : state.lastEditKey,
     })),
 
-  onEdgesChange: (changes) => set((state) => ({ edges: applyEdgeChanges(changes, state.edges) })),
+  onEdgesChange: (changes) =>
+    set((state) => ({
+      edges: applyEdgeChanges(changes, state.edges),
+      lastEditKey: changes.some((c) => c.type === 'select') ? null : state.lastEditKey,
+    })),
 
   onConnect: (connection) => {
     const { nodes, edges } = get()
@@ -86,8 +113,21 @@ export const useArchitectureStore = create((set, get) => ({
       selected: true,
       data: { componentType, label: def.label, config: defaultConfig(componentType) },
     }
-    set((state) => ({ ...record(state), nodes: [...state.nodes.map(deselect), node] }))
+    set((state) => ({
+      ...record(state),
+      nodes: [...state.nodes.map(deselect), node],
+      edges: state.edges.map(deselect), // otherwise Delete would also remove a hidden selected edge
+    }))
     return node.id
+  },
+
+  /** Ends the current editing session, so the next edit of the same field is a new undo step. */
+  endEdit: () => set({ lastEditKey: null }),
+
+  /** Replaces the whole graph with a starter template (undoable). */
+  loadTemplate: (templateId) => {
+    const graph = instantiateTemplate(getTemplate(templateId)) // throws before any state change
+    set((state) => ({ ...record(state), ...graph }))
   },
 
   updateNodeConfig: (id, key, value) => {

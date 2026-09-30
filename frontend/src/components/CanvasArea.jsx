@@ -6,6 +6,7 @@ import { useArchitectureStore } from '../store/architectureStore.js'
 import { categoryColor } from '../lib/categories.js'
 import { COMPONENT_DRAG_MIME } from '../lib/dragAndDrop.js'
 import ComponentNode from './ComponentNode.jsx'
+import TemplatePicker from './TemplatePicker.jsx'
 
 // Defined outside the component so React Flow sees the same object every render.
 const nodeTypes = { component: ComponentNode }
@@ -72,6 +73,8 @@ function CanvasArea() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         isValidConnection={isValidConnection}
+        // Also fires for multi-selection drags (xyflow calls it before onSelectionDragStart),
+        // so this one handler gives exactly one undo step per drag.
         onNodeDragStart={snapshot}
         onBeforeDelete={onBeforeDelete}
         deleteKeyCode={DELETE_KEYS}
@@ -83,13 +86,10 @@ function CanvasArea() {
       </ReactFlow>
 
       {nodes.length === 0 && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="max-w-xs text-center">
-            <p className="text-sm font-medium text-ink">Start with a Client</p>
-            <p className="mt-1 text-sm text-ink-muted">
-              Drag components from the left panel (or click them), then connect them
-              by dragging from a node&apos;s right dot to another node&apos;s left dot.
-            </p>
+        // The overlay lets clicks/drops pass through to the canvas; only the cards catch them.
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+          <div className="pointer-events-auto w-full max-w-sm">
+            <TemplatePicker />
           </div>
         </div>
       )}
