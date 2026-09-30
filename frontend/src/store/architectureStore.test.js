@@ -210,6 +210,19 @@ describe('loadTemplate', () => {
   })
 })
 
+describe('replaceGraph', () => {
+  it('loads a design, clears undo history and bumps the revision', () => {
+    store().addNode('cache', { x: 0, y: 0 })
+    const before = store().revision
+    const nodes = [{ id: 'n1', type: 'component', position: { x: 1, y: 2 }, data: { componentType: 'cdn', label: 'CDN', config: {} } }]
+    store().replaceGraph(nodes, [])
+    expect(store().nodes).toBe(nodes)
+    expect(store().past).toHaveLength(0)
+    expect(store().future).toHaveLength(0)
+    expect(store().revision).toBeGreaterThan(before)
+  })
+})
+
 describe('revision', () => {
   it('increments on design changes but not on selection or dragging', () => {
     const r0 = store().revision

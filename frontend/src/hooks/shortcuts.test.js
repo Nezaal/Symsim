@@ -21,6 +21,10 @@ describe('shortcutFor', () => {
     expect(shortcutFor(press('y', { ctrlKey: true }))).toBe('redo')
   })
 
+  it('maps Ctrl+S to save', () => {
+    expect(shortcutFor(press('s', { ctrlKey: true }))).toBe('save')
+  })
+
   it('maps Ctrl+D to duplicate', () => {
     expect(shortcutFor(press('d', { ctrlKey: true }))).toBe('duplicate')
   })

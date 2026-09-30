@@ -30,8 +30,9 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/app" element={<EditorPage />} />
-      <Route path="/app/p/:projectId" element={<EditorPage />} />
+      {/* One route for /app and /app/p/:projectId, so saving (which changes the
+          URL) never remounts the editor and resets the canvas view. */}
+      <Route path="/app/*" element={<EditorPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

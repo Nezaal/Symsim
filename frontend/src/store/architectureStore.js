@@ -272,6 +272,13 @@ export const useArchitectureStore = create((set, get) => ({
       }
     }),
 
+  /**
+   * Loads a whole design (opening a project, restoring a draft). Undo history
+   * starts fresh: undoing into a different project would be confusing.
+   */
+  replaceGraph: (nodes, edges) =>
+    set((state) => ({ nodes, edges, past: [], future: [], lastEditKey: null, revision: state.revision + 1 })),
+
   /** Clears the graph and history (used by tests, later by "New project"). */
   reset: () => set(INITIAL_STATE),
 }))

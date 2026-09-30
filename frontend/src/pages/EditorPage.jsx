@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { useSearchParams } from 'react-router'
+import { useMatch, useSearchParams } from 'react-router'
 import { useAuthStore } from '../store/authStore.js'
 import Toolbar from '../components/Toolbar.jsx'
 import CanvasArea from '../components/CanvasArea.jsx'
 import ResultsOverlay from '../components/results/ResultsOverlay.jsx'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js'
+import { useEditorSession } from '../hooks/useEditorSession.js'
+import SaveDialog from '../components/project/SaveDialog.jsx'
 
 /**
  * The editor (/app): a slim toolbar, then the canvas taking all remaining space.
@@ -29,8 +31,10 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js'
  * toolbar's Templates menu) can use React Flow hooks such as useReactFlow().
  */
 function EditorPage() {
+  const projectId = useMatch('/app/p/:projectId')?.params.projectId
   useKeyboardShortcuts()
   useOpenSignInFromUrl()
+  useEditorSession(projectId ?? null)
 
   return (
     <ReactFlowProvider>
@@ -41,6 +45,7 @@ function EditorPage() {
         </main>
       </div>
       <ResultsOverlay />
+      <SaveDialog />
     </ReactFlowProvider>
   )
 }

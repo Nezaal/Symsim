@@ -13,7 +13,7 @@ export function isTypingTarget(target) {
  * Maps a keydown event to an editor command.
  * @param {{ key: string, ctrlKey: boolean, metaKey: boolean, shiftKey: boolean, altKey?: boolean, repeat?: boolean, target: EventTarget | null }} event
  * @param {{ enabled?: boolean }} [options] enabled: false while the canvas is hidden (results open)
- * @returns {'undo' | 'redo' | 'duplicate' | null}
+ * @returns {'undo' | 'redo' | 'duplicate' | 'save' | null}
  */
 export function shortcutFor(event, { enabled = true } = {}) {
   if (!enabled || isTypingTarget(event.target)) return null
@@ -24,5 +24,6 @@ export function shortcutFor(event, { enabled = true } = {}) {
   if (key === 'z') return event.shiftKey ? 'redo' : 'undo' // holding undo/redo to step repeatedly is fine
   if (key === 'y') return 'redo'
   if (key === 'd') return event.repeat ? null : 'duplicate' // but holding D would spray copies
+  if (key === 's') return event.repeat ? null : 'save'
   return null
 }

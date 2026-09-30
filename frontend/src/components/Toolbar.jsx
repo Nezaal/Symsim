@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import TemplatesMenu from './TemplatesMenu.jsx'
 import RunControls from './RunControls.jsx'
 import AccountMenu from './auth/AccountMenu.jsx'
+import ProjectBar from './project/ProjectBar.jsx'
 
 /** Slim top bar. Canvas tools (zoom, undo/redo) live on the canvas itself. */
 function Toolbar() {
@@ -12,6 +13,8 @@ function Toolbar() {
           SystemSim
         </Link>
       </h1>
+      <span className="h-5 w-px bg-line" aria-hidden="true" />
+      <ProjectBar />
       <TemplatesMenu />
       <RunControls />
       <AccountMenu />
